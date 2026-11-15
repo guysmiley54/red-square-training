@@ -49,6 +49,25 @@
   var PAGES = { "glenorchy-menu": "glenorchy-menu.html" };
   function testLink(key){ var p = String(key).split(":"); return PAGES[p[0]] ? PAGES[p[0]] + "#" + p[1] : null; }
 
+  // Old copies of a page can hang around in a browser tab. On load, and when a tab comes back into view,
+  // compare this page's version with the published one and reload once if it is behind.
+  function checkBuild(){
+    try{
+      var tag = document.querySelector('script[src*="common.js?v="]'); if(!tag) return;
+      var mine = tag.getAttribute("src").split("v=")[1];
+      fetch("version.txt?t=" + Date.now(), {cache:"no-store"}).then(function(r){ return r.ok ? r.text() : ""; }).then(function(v){
+        v = v.trim(); if(!v || v === mine) return;
+        var tried = ""; try{ tried = sessionStorage.getItem("rs-build-tried") || ""; }catch(e){}
+        if(tried === v) return;
+        try{ sessionStorage.setItem("rs-build-tried", v); }catch(e){}
+        var u = new URL(location.href); u.searchParams.set("b", v); location.replace(u.toString());
+      }).catch(function(){});
+    }catch(e){}
+  }
+  checkBuild();
+  window.addEventListener("pageshow", function(e){ if(e.persisted) checkBuild(); });
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden && /(\/|index\.html)$/.test(location.pathname)) checkBuild(); });
+
   window.Training = { getSession:getSession, setSession:setSession, signOut:signOut, api:api, watchIdle:watchIdle,
     el:el, fmtDate:fmtDate, fmtDateTime:fmtDateTime, testLink:testLink };
 })();

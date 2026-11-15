@@ -47,3 +47,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 2. In the Tests tab, set **Assigned** for those sections to the changeover date.
 
 Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days. Old attempts stay in each person's history, and the Monday emails list them as a menu change re-sit.
+
+## Publishing a change
+
+Bump the `?v=` tag in the three HTML pages and put the same value in `version.txt`. Open pages compare themselves to `version.txt` and reload once if they are behind.
