@@ -4,13 +4,14 @@
  * Standalone Apps Script project in the redsquarecafe80 Google account.
  * Deployed as a web app (Execute as: Me, Who has access: Anyone). The /exec URL goes in config.js.
  *
- * The "Staff Training Log" spreadsheet holds three tabs:
+ * The "Staff Training Log" spreadsheet holds these tabs:
  *   Staff     one row per person. Leave the PIN column empty; each person sets their own PIN the
  *             first time they sign in. Clear the cell to reset a forgotten PIN.
  *   Tests     the tests each venue's crew must pass, the date each was assigned, and how often a refresher is due.
  *   Attempts  one row per test attempt (written by this script).
+ *   Settings  the email on/off switch.
  *
- * Each person with an email in the Staff tab gets their result after every attempt, and at most one
+ * Emails are OFF until the Settings tab says "Emails on | Yes". Once on, each person with an email in the Staff tab gets their result after every attempt, and at most one
  * reminder a week (Monday) while they have a test to do. Managers also get a Monday follow-up list.
  *
  * Nobody sees anything without signing in. Crew see their own results only.
@@ -29,6 +30,7 @@ const SITE_URL = 'https://guysmiley54.github.io/red-square-training/';
 const TABS = {
   Staff: ['Name', 'Venue', 'Role', 'Email', 'Start date', 'Active', 'PIN (set by staff, clear to reset)'],
   Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned', 'Refresher every (months)'],
+  Settings: ['Setting', 'Value'],
   Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID']
 };
 const SEED_TESTS = [
@@ -255,7 +257,7 @@ const OWN_TIME = 'at work or in your own time, whichever suits you';
 
 // Sent to the person straight after each attempt, if they have an email in the Staff tab.
 function emailResult_(staff, req, right, total, pct) {
-  if (!staff.email) return;
+  if (!staff.email || !emailsOn_()) return;
   const title = clean_(req.test, 60) + ': ' + clean_(req.section, 80);
   const review = (Array.isArray(req.review) ? req.review : []).slice(0, 40).map(function (m) {
     return '- ' + clean_(m && m.q, 300) + '\n  Answer: ' + clean_(m && m.a, 300);
@@ -270,6 +272,7 @@ function emailResult_(staff, req, right, total, pct) {
 // Runs every Monday morning. Managers get their follow-up list, and anyone with a test
 // to do gets one reminder. Nobody gets more than one reminder a week.
 function weeklyDigest() {
+  if (!emailsOn_()) return;
   const data = load_();
   const now = new Date();
   managerDigest_(data, now);
@@ -317,6 +320,11 @@ function reminderLines_(tests, now) {
   return out;
 }
 
+// The master switch: no email of any kind is sent unless the Settings tab says "Emails on | Yes".
+function emailsOn_() {
+  return readTab_('Settings').some(function (r) { return norm_(r[0]) === 'emails on' && /^y/i.test(String(r[1]).trim()); });
+}
+
 function first_(s) { return s.name.split(' ')[0]; }
 function day_(d) { return Utilities.formatDate(d, TIMEZONE, 'd MMM'); }
 
@@ -362,6 +370,7 @@ function sheet_(name) {
     sh.appendRow(TABS[name]);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, TABS[name].length).setFontWeight('bold');
+    if (name === 'Settings') sh.appendRow(['Emails on', 'No']);
     if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date(), REFRESH_MONTHS]); });
   }
   return sh;

@@ -18,6 +18,8 @@ Everyone signs in with their name and a 4-digit PIN. Crew see their own tests an
 - **Tests**: the tests each venue must pass and the date they were assigned. A test is due 14 days after it is assigned, or 14 days after the person's start date if that is later.
 - **Attempts**: one row per attempt, written by the script.
 
+- **Settings**: `Emails on` is `No` until you are ready. No email of any kind goes out while it is `No`.
+
 ## Rules
 
 - Pass mark 80%.

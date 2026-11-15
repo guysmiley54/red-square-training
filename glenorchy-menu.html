@@ -127,7 +127,7 @@
   function save(){
     var sv = $("rSave"); $("rRetrySave").hidden = true;
     sv.className = "note"; sv.textContent = "Saving your result to your profile...";
-    T.api("attempt", state.record).then(function(){ sv.textContent = "Result saved to your profile. If your email is on file, a copy is on its way to you."; })
+    T.api("attempt", state.record).then(function(){ sv.textContent = "Result saved to your profile."; })
       .catch(function(err){
         if(!T.getSession()){ sv.className = "err"; sv.textContent = "Your sign-in ran out before this result was saved. Tell your manager your score, then sign in and sit it again."; return; }
         sv.className = "err"; sv.textContent = "This result has not been saved. " + err.message; $("rRetrySave").hidden = false;
