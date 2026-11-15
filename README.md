@@ -8,6 +8,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 
 - `index.html` sign-in, My training, and the manager crew view
 - `glenorchy-menu.html` + `glenorchy-menu.questions.js` the Glenorchy menu test (September 2026 menu)
+- `glenorchy-menu-learn.html` the Glenorchy menu guide to read before the test
 - `common.js`, `common.css` shared sign-in session and styling
 - `config.js` the address of the Apps Script web app
 - `apps-script/Code.gs` the backend. It lives in the "Staff Training Log" Apps Script project (redsquarecafe80 Google account) and reads and writes the "Staff Training Log" spreadsheet
@@ -19,6 +20,15 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 - **Attempts**: one row per attempt, written by the script.
 
 - **Settings**: `Emails on` is `No` until you are ready. No email of any kind goes out while it is `No`.
+
+- **Training**: one row each time a manager marks someone as trained on a section (written by the script).
+
+## Train first, then test
+
+1. **Learn**: `glenorchy-menu-learn.html` covers everything the tests ask. Anyone can read it any time.
+2. **Practice**: any section can be sat as a practice run. Nothing is saved.
+3. **Floor training**: a manager takes the person through the section at work, then marks it as trained in the crew view.
+4. **Test**: the 14 days to pass start from that sign-off. Until then nothing is due and a low score is not flagged.
 
 ## Rules
 

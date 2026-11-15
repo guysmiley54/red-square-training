@@ -10,6 +10,10 @@
  *   Tests     the tests each venue's crew must pass, the date each was assigned, and how often a refresher is due.
  *   Attempts  one row per test attempt (written by this script).
  *   Settings  the email on/off switch.
+ *   Training  one row each time a manager signs off that they trained someone on a section.
+ *
+ * Training comes first: a test is not due, and a low score is not flagged, until a manager has signed off
+ * the floor training for that person and section. The 14 days run from the sign-off.
  *
  * Emails are OFF until the Settings tab says "Emails on | Yes". Once on, each person with an email in the Staff tab gets their result after every attempt, and at most one
  * reminder a week (Monday) while they have a test to do. Managers and owners get a Monday summary of their crew.
@@ -34,6 +38,7 @@ const TABS = {
   Staff: ['Name', 'Venue', 'Role', 'Email', 'Start date', 'Active', 'PIN (set by staff, clear to reset)'],
   Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned', 'Refresher every (months)'],
   Settings: ['Setting', 'Value'],
+  Training: ['When', 'Name', 'Test key', 'Trained by'],
   Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID']
 };
 const SEED_TESTS = [
@@ -64,6 +69,7 @@ function route_(req) {
     case 'me': return me_(auth_(req));
     case 'attempt': return attempt_(auth_(req), req);
     case 'crew': return crew_(auth_(req));
+    case 'train': return train_(auth_(req), req);
     default: throw new Error('Unknown request.');
   }
 }
@@ -223,6 +229,24 @@ function crew_(viewer) {
   return { ok: true, passMark: PASS_MARK, crew: crewOf_(viewer, data).map(function (s) { return member_(s, data, now); }) };
 }
 
+// A manager or owner records that they have trained someone on the floor. That starts the clock on the test.
+function train_(viewer, req) {
+  if (viewer.role === 'Crew') throw new Error('Only managers can sign off training.');
+  const data = load_();
+  const person = crewOf_(viewer, data).filter(function (s) { return staffId_(s.key) === String(req.staff); })[0];
+  if (!person) throw new Error('That person is not in your crew.');
+  const keys = (Array.isArray(req.keys) ? req.keys : []).map(String);
+  const now = new Date();
+  const open = status_(person, data, now).filter(function (t) { return t.state === 'untrained' && keys.indexOf(t.key) !== -1; });
+  if (!open.length) return { ok: true, added: 0 };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    open.forEach(function (t) { appendRow_('Training', [now, person.name, t.key, viewer.name]); });
+  } finally { lock.releaseLock(); }
+  return { ok: true, added: open.length };
+}
+
 /* ---------- status rules ---------- */
 
 function crewOf_(viewer, data) {
@@ -235,7 +259,7 @@ function crewOf_(viewer, data) {
 
 function member_(s, data, now) {
   const tests = status_(s, data, now);
-  return { name: s.name, venue: s.venueText, role: s.role, tests: tests, flags: flags_(tests), attempts: attemptsFor_(s, data) };
+  return { id: staffId_(s.key), name: s.name, venue: s.venueText, role: s.role, tests: tests, flags: flags_(tests), attempts: attemptsFor_(s, data) };
 }
 
 // One entry per required test that applies to this person.
@@ -255,20 +279,29 @@ function status_(staff, data, now) {
     const passes = at.filter(function (a) { return a.pct >= PASS_MARK; });
     const latest = at.length ? at[at.length - 1] : null;
     const lastPass = passes.length ? passes[passes.length - 1] : null;
-    let failsInRow = 0;
-    for (let i = at.length - 1; i >= 0 && at[i].pct < PASS_MARK; i--) failsInRow++;
     // A pass runs out after the refresher period, then the test is due again.
     const refreshFrom = lastPass && t.refreshMonths > 0 ? addMonths_(lastPass.when, t.refreshMonths) : null;
     const needsRefresh = !!refreshFrom && now.getTime() > refreshFrom.getTime();
     const passed = !!lastPass && !needsRefresh;
+    // Training on the floor comes first. Until a manager signs it off, nothing is due and a low score is not held against anyone.
+    const signed = data.training.filter(function (x) { return x.name === staff.key && x.key === t.key; })
+      .sort(function (a, b) { return a.when - b.when; })[0] || null;
+    const untrained = !owner && !signed && !lastPass;
+    // A fail from before the training was signed off is not held against anyone.
+    const counted = signed ? at.filter(function (x) { return x.when.getTime() >= signed.when.getTime(); }) : at;
+    const latestCounted = counted.length ? counted[counted.length - 1] : null;
+    let failsInRow = 0;
+    for (let i = counted.length - 1; i >= 0 && counted[i].pct < PASS_MARK; i--) failsInRow++;
     const from = needsRefresh ? refreshFrom.getTime()
-      : (Math.max(t.assigned ? t.assigned.getTime() : 0, staff.start ? staff.start.getTime() : 0) || now.getTime());
+      : (Math.max(t.assigned ? t.assigned.getTime() : 0, staff.start ? staff.start.getTime() : 0, signed ? signed.when.getTime() : 0) || now.getTime());
     const due = new Date(from + DUE_DAYS * 86400000);
     return {
       key: t.key, title: t.title,
       state: owner ? (lastPass ? 'passed' : (latest ? 'retest' : 'todo'))
-        : (passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latest ? 'retest' : 'todo')))),
-      due: owner ? null : due.toISOString(),
+        : (untrained ? 'untrained' : (passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latestCounted ? 'retest' : 'todo'))))),
+      due: owner || untrained ? null : due.toISOString(),
+      trainedOn: signed ? signed.when.toISOString() : null,
+      trainedBy: signed ? signed.by : null,
       optional: owner,
       menuChanged: menuChanged,
       passedOn: lastPass ? lastPass.when.toISOString() : null,
@@ -283,13 +316,15 @@ function status_(staff, data, now) {
 }
 
 // Behind: a required test not passed by its due date. Poor: the latest attempt at a test is under the pass mark.
+// Neither applies to a test the person has not been trained on yet.
 function flags_(tests) {
   const behind = tests.filter(function (t) { return t.state === 'overdue'; });
-  const poor = tests.filter(function (t) { return t.failsInRow > 0; });
+  const poor = tests.filter(function (t) { return t.failsInRow > 0 && t.state !== 'untrained'; });
   return {
     required: tests.length,
     passed: tests.filter(function (t) { return t.state === 'passed'; }).length,
     behind: behind.map(function (t) { return t.title; }),
+    untrained: tests.filter(function (t) { return t.state === 'untrained'; }).map(function (t) { return t.title; }),
     poor: poor.map(function (t) { return { title: t.title, pct: t.latestPct, failsInRow: t.failsInRow }; })
   };
 }
@@ -404,7 +439,7 @@ function weeklyDigest() {
 // What a manager or owner needs to know about their crew this week.
 function summaryFor_(viewer, data, now) {
   const from = now.getTime() - SUMMARY_DAYS * 86400000;
-  const out = { follow: [], retest: [], results: [], progress: [] };
+  const out = { follow: [], retest: [], results: [], progress: [], training: [] };
   crewOf_(viewer, data).forEach(function (s) {
     const tests = status_(s, data, now);
     const f = flags_(tests);
@@ -412,6 +447,7 @@ function summaryFor_(viewer, data, now) {
     f.poor.forEach(function (p) {
       out.follow.push({ lead: s.name, detail: p.pct + '% on ' + shortTitle_(p.title) + (p.failsInRow > 1 ? ', ' + p.failsInRow + ' fails in a row' : ''), label: 'Low score', tone: 'warn' });
     });
+    if (f.untrained.length) out.training.push({ lead: s.name, detail: (f.untrained.length === f.required ? 'All ' + f.required + ' sections' : shortTitles_(f.untrained)), label: 'To train', tone: 'plain' });
     const refresh = tests.filter(function (t) { return t.state === 'refresh' || (t.state === 'overdue' && t.refreshOn && new Date(t.refreshOn) <= now); });
     const changed = tests.filter(function (t) { return t.menuChanged; });
     if (refresh.length) out.retest.push({ lead: s.name, detail: 'Refresher due: ' + shortTitles_(refresh.map(function (t) { return t.title; })), label: 'Refresher', tone: 'warn' });
@@ -419,8 +455,8 @@ function summaryFor_(viewer, data, now) {
     data.attempts.filter(function (a) { return norm_(a.name) === s.key && a.when.getTime() >= from; }).forEach(function (a) {
       out.results.push({ lead: s.name, detail: a.test + ': ' + a.section + ', ' + day_(a.when), label: a.pct + '%', tone: a.pct >= PASS_MARK ? 'good' : 'bad' });
     });
-    out.progress.push({ lead: s.name, detail: f.passed + ' of ' + f.required + ' passed',
-      label: f.behind.length ? 'Behind' : (f.poor.length ? 'Needs help' : (f.required && f.passed === f.required ? 'Complete' : 'On track')),
+    out.progress.push({ lead: s.name, detail: f.passed + ' of ' + f.required + ' passed' + (f.untrained.length ? ', ' + f.untrained.length + ' not trained yet' : ''),
+      label: f.behind.length ? 'Behind' : (f.poor.length ? 'Needs help' : (f.required && f.passed === f.required ? 'Complete' : (f.untrained.length ? 'To train' : 'On track'))),
       tone: f.behind.length ? 'bad' : (f.poor.length ? 'warn' : (f.required && f.passed === f.required ? 'good' : 'plain')) });
   });
   return out;
@@ -430,7 +466,7 @@ function weeklySummary_(data, now) {
   data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
     const sum = summaryFor_(m, data, now);
     if (!sum.progress.length) return;
-    if (!sum.follow.length && !sum.retest.length && !sum.results.length) return; // a quiet week sends nothing
+    if (!sum.follow.length && !sum.retest.length && !sum.results.length && !sum.training.length) return; // a quiet week sends nothing
     const mail = summaryEmail_(m, sum);
     send_(m.email, mail.subject, mail.text, mail.html);
   });
@@ -443,6 +479,7 @@ function summaryEmail_(m, sum) {
   if (sum.follow.length) counts.push(sum.follow.length + ' to follow up');
   if (sum.retest.length) counts.push(sum.retest.length + ' ready to re-test');
   if (sum.results.length) counts.push(sum.results.length + (sum.results.length === 1 ? ' result' : ' results') + ' this week');
+  if (sum.training.length) counts.push(sum.training.length + ' waiting on training');
   const where = m.role === 'Owner' ? 'all venues' : m.venueText;
 
   const html = shell_('Crew training summary',
@@ -450,14 +487,16 @@ function summaryEmail_(m, sum) {
     (sum.follow.length ? section_('Needs a follow up', rows(sum.follow)) : '') +
     (sum.retest.length ? section_('Ready to re-test', rows(sum.retest)) : '') +
     (sum.results.length ? section_('Results this week', rows(sum.results)) : '') +
+    (sum.training.length ? section_('Waiting on floor training', rows(sum.training)) : '') +
     section_('Where everyone is at', rows(sum.progress)) +
-    '<p style="margin:16px 0 4px;color:' + MUTED + ';font-size:14px;">Pass mark ' + PASS_MARK + '%. Each test is due ' + DUE_DAYS + ' days after it is assigned.</p>',
+    '<p style="margin:16px 0 4px;color:' + MUTED + ';font-size:14px;">Pass mark ' + PASS_MARK + '%. A test is due ' + DUE_DAYS + ' days after you sign off the training in the crew view.</p>',
     'Open the crew view');
 
   const text = 'Hi ' + first_(m) + ',\n\nCrew training summary for ' + where + ': ' + counts.join(', ') + '.\n' +
     (sum.follow.length ? '\nNEEDS A FOLLOW UP\n' + textRows(sum.follow) + '\n' : '') +
     (sum.retest.length ? '\nREADY TO RE-TEST\n' + textRows(sum.retest) + '\n' : '') +
     (sum.results.length ? '\nRESULTS THIS WEEK\n' + textRows(sum.results) + '\n' : '') +
+    (sum.training.length ? '\nWAITING ON FLOOR TRAINING\n' + textRows(sum.training) + '\n' : '') +
     '\nWHERE EVERYONE IS AT\n' + textRows(sum.progress) + '\n\nCrew view: ' + SITE_URL + '\n\n' + SIGN_OFF + '\n';
   return { subject: 'Crew training: ' + counts.join(', '), text: text, html: html };
 }
@@ -516,7 +555,9 @@ function setup() { Object.keys(TABS).forEach(function (n) { sheet_(n); }); }
 /* ---------- sheet access ---------- */
 
 function load_() {
-  return { staff: staffList_(), tests: readTab_('Tests').filter(function (r) { return r[0]; }).map(function (r) {
+  return { staff: staffList_(), training: readTab_('Training').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
+    return { when: date_(r[0]) || new Date(0), name: norm_(r[1]), key: String(r[2]), by: String(r[3] || '') };
+  }), tests: readTab_('Tests').filter(function (r) { return r[0]; }).map(function (r) {
     return { key: String(r[0]).trim(), title: String(r[1] || r[0]), venue: norm_(r[2]) || 'all', required: !/^n/i.test(String(r[3]).trim()), assigned: date_(r[4]),
       refreshMonths: (r[5] === '' || r[5] == null || isNaN(Number(r[5]))) ? REFRESH_MONTHS : Number(r[5]) };
   }), attempts: readTab_('Attempts').filter(function (r) { return r[0] && r[1]; }).map(function (r) {

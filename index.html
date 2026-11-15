@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115g">
+<link rel="stylesheet" href="common.css?v=20261115h">
 </head>
 <body>
 <div class="wrap">
@@ -65,6 +65,7 @@
     <!-- my training -->
     <div id="mine" class="stack" hidden>
       <div id="mineAlert"></div>
+      <p class="note" id="mineHow">Learn shows you what is in each section. Practice is a trial run that is not saved. Sit test is the real one and goes on your profile.</p>
       <h2 id="mineHead">Tests to pass</h2>
       <div id="mineTests" class="stack" style="gap:10px"></div>
       <div id="mineExtra" class="stack" style="gap:10px"></div>
@@ -86,7 +87,9 @@
       <div class="row between"><h2 id="personName"></h2><span id="personPill"></span></div>
       <p class="muted" id="personMeta"></p>
       <div id="personAlert"></div>
-      <h3>Required tests</h3>
+      <div class="row between"><h3>Required tests</h3><button class="btn small" id="trainAll" type="button" hidden>Mark all as trained</button></div>
+      <p class="note" id="trainNote" hidden>Mark a section as trained once you have taken them through it on the floor. That starts their 14 days to pass it.</p>
+      <p class="err" id="trainErr" hidden></p>
       <div class="scroll"><table id="personTests"></table></div>
       <h3>All attempts</h3>
       <div class="scroll"><table id="personAttempts"></table></div>
@@ -94,8 +97,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115g"></script>
-<script src="common.js?v=20261115g"></script>
+<script src="config.js?v=20261115h"></script>
+<script src="common.js?v=20261115h"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -146,6 +149,7 @@
   /* ---------- status wording ---------- */
   function testPill(t){
     if(t.state === "passed") return pill("pass", "Passed " + t.best + "%");
+    if(t.state === "untrained") return pill("plain", "Not trained yet");
     if(t.state === "overdue") return pill("fail", "Overdue");
     if(t.state === "retest") return pill("warn", "Re-test");
     if(t.state === "refresh") return pill("warn", "Refresher due");
@@ -155,6 +159,7 @@
     if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.refreshOn ? ". Refresher from " + T.fmtDate(t.refreshOn) : "") + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
     if(t.state === "refresh") return "Last passed " + T.fmtDate(t.passedOn) + ". Refresher due by " + T.fmtDate(t.due);
     var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
+    if(t.state === "untrained") return last + "Your manager signs this off after training you on the floor. Nothing is due until then.";
     if(!t.due) return last + "Optional for you";
     if(t.menuChanged) last = "The menu has changed, so this needs a re-sit. " + last;
     if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
@@ -164,6 +169,7 @@
     if(f.behind.length) return pill("fail", "Behind");
     if(f.poor.length) return pill("warn", "Needs help");
     if(f.required && f.passed === f.required) return pill("pass", "Complete");
+    if(f.untrained && f.untrained.length) return pill("plain", "To train");
     return pill("plain", "On track");
   }
   function flagLines(name, f){
@@ -218,6 +224,7 @@
       else if(t.state === "refresh") lines.push(t.title + " is due for a refresher by " + T.fmtDate(t.due));
     });
     alertBox($("mineAlert"), optional ? [] : lines, res.tests.length && !mine.length && !optional ? "You have passed every required test." : "");
+    $("mineHow").hidden = !res.tests.length;
     var list = clear($("mineTests"));
     if(!res.tests.length) list.appendChild(el("p", "muted", "No tests have been assigned to you yet."));
     res.tests.forEach(function(t){
@@ -225,13 +232,18 @@
       left.appendChild(el("div", "t", t.title)); left.appendChild(el("div", "note", testLine(t)));
       var right = el("div", "row"); right.appendChild(testPill(t));
       var link = T.testLink(t.key);
-      if(link){ var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.state === "refresh" ? "Sit refresher" : (t.tries ? "Re-test" : "Start"))); a.href = link; right.appendChild(a); }
+      if(link){
+        var sec = t.key.split(":")[1], page = link.split("#")[0];
+        var learn = el("a", "btn small ghost", "Learn"); learn.href = page.replace(".html", "-learn.html") + "#" + sec; right.appendChild(learn);
+        var prac = el("a", "btn small ghost", "Practice"); prac.href = page + "#practice-" + sec; right.appendChild(prac);
+        var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.state === "refresh" ? "Sit refresher" : (t.tries ? "Re-test" : "Sit test"))); a.href = link; right.appendChild(a);
+      }
       item.appendChild(left); item.appendChild(right); list.appendChild(item);
     });
     var extra = clear($("mineExtra"));
     if(res.tests.some(function(t){ return t.key.indexOf("glenorchy-menu:") === 0; })){
-      var full = el("a", "sec full"); full.href = "glenorchy-menu.html#full";
-      var l = el("span"); l.appendChild(el("b", null, "Glenorchy full menu test")); l.appendChild(el("small", null, "Practice: a random mix from every section"));
+      var full = el("a", "sec full"); full.href = "glenorchy-menu.html#practice-full";
+      var l = el("span"); l.appendChild(el("b", null, "Glenorchy full menu test")); l.appendChild(el("small", null, "Practice run: a random mix from every section, not saved"));
       full.appendChild(l); full.appendChild(el("span", "n", "30 questions")); extra.appendChild(full);
     }
     attemptsTable($("mineAttempts"), res.attempts, false);
@@ -277,15 +289,30 @@
     $("personName").textContent = m.name; clear($("personPill")).appendChild(memberPill(m.flags));
     $("personMeta").textContent = [m.venue, m.role, m.flags.passed + " of " + m.flags.required + " required tests passed"].join(" · ");
     alertBox($("personAlert"), flagLines(m.name.split(" ")[0], m.flags), "");
-    var tt = clear($("personTests"));
+    var tt = clear($("personTests")), open = m.tests.filter(function(t){ return t.state === "untrained"; });
+    setErr("trainErr"); $("trainAll").hidden = !open.length; $("trainNote").hidden = !open.length;
+    $("trainAll").onclick = function(){ signOff(m, open.map(function(t){ return t.key; }), $("trainAll")); };
     if(!m.tests.length) tt.appendChild(row(["No required tests for this venue."]));
     else {
-      tt.appendChild(row(["Test","Status","Tries","Best","Detail"], true));
-      m.tests.forEach(function(t){ tt.appendChild(row([t.title, testPill(t), t.tries, t.best == null ? "" : t.best + "%", testLine(t)])); });
+      tt.appendChild(row(["Test","Status","Tries","Best","Detail",""], true));
+      m.tests.forEach(function(t){
+        var act = "";
+        if(t.state === "untrained"){ act = el("button", "btn small ghost", "Mark trained"); act.type = "button"; act.addEventListener("click", function(){ signOff(m, [t.key], act); }); }
+        var detail = t.state === "untrained" ? (t.tries ? "Last try " + t.latestPct + "%. " : "") + "Not signed off yet" : testLine(t) + (t.trainedOn ? ". Trained " + T.fmtDate(t.trainedOn) + (t.trainedBy ? " by " + t.trainedBy.split(" ")[0] : "") : "");
+        tt.appendChild(row([t.title, testPill(t), t.tries, t.best == null ? "" : t.best + "%", detail, act]));
+      });
     }
     attemptsTable($("personAttempts"), m.attempts, true);
   }
-  $("personBack").addEventListener("click", function(){ $("person").hidden = true; $("crew").hidden = false; });
+  function signOff(m, keys, btn){
+    setErr("trainErr"); btn.disabled = true;
+    T.api("train", {staff:m.id, keys:keys}).then(function(){ return T.api("crew"); }).then(function(res){
+      crewData = res.crew;
+      var fresh = crewData.filter(function(x){ return x.id === m.id; })[0];
+      if(fresh) openPerson(fresh); else { $("person").hidden = true; $("crew").hidden = false; renderCrew(); }
+    }).catch(function(err){ btn.disabled = false; setErr("trainErr", err.message); });
+  }
+  $("personBack").addEventListener("click", function(){ $("person").hidden = true; $("crew").hidden = false; renderCrew(); });
 
   /* ---------- start ---------- */
   if(!window.TRAINING_API){ show("signin"); setErr("signinErr", "The staff log is not connected yet, so nobody can sign in."); $("signinBtn").disabled = true; }

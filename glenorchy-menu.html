@@ -6,7 +6,7 @@
 <title>Glenorchy Menu Test</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115g">
+<link rel="stylesheet" href="common.css?v=20261115h">
 </head>
 <body>
 <div class="wrap">
@@ -16,17 +16,19 @@
     <p class="muted">September 2026 menu. Pass mark <span id="passLabel">80</span>%.</p>
   </header>
   <div class="who"><span>Signed in as <b id="whoName"></b></span>
-    <span class="row"><a class="btn ghost small" href="index.html">My training</a>
+    <span class="row"><a class="btn ghost small" href="glenorchy-menu-learn.html">Learn</a><a class="btn ghost small" href="index.html">My training</a>
     <button class="btn ghost small" id="signout" type="button">Sign out</button></span></div>
 
   <!-- START -->
   <section id="start" class="stack" hidden>
-    <p><span class="marker">Pick a section to start</span></p>
+    <p><span class="marker">Pick a section to sit the test</span></p>
+    <p class="note">These are the real tests and go on your profile. For a trial run, use Practice on My training. <a href="glenorchy-menu-learn.html">Read the Learn page</a> first if you have not yet.</p>
     <div id="secList" class="stack" style="gap:10px"></div>
   </section>
 
   <!-- QUIZ -->
   <section id="quiz" class="stack" hidden>
+    <p id="modeNote" hidden><span class="marker">Practice run. Nothing is saved.</span></p>
     <div class="meta"><span id="qSec"></span><span id="qNum"></span></div>
     <div class="bar"><i id="qBar" style="width:0"></i></div>
     <h2 id="qText"></h2>
@@ -44,6 +46,7 @@
     <p class="note" id="rSave"></p>
     <div><button class="btn small" id="rRetrySave" type="button" hidden>Try saving again</button></div>
     <div class="row"><button class="btn" id="retry" type="button">Re-test this section</button>
+      <a class="btn" id="realTest" href="#" hidden>Sit the real test</a>
       <a class="btn ghost" href="index.html">Back to my training</a></div>
     <div id="missBox" class="stack" hidden>
       <h2>Questions to review</h2>
@@ -52,9 +55,9 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115g"></script>
-<script src="common.js?v=20261115g"></script>
-<script src="glenorchy-menu.questions.js?v=20261115g"></script>
+<script src="config.js?v=20261115h"></script>
+<script src="common.js?v=20261115h"></script>
+<script src="glenorchy-menu.questions.js?v=20261115h"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -80,18 +83,19 @@
       var b = el("button","sec"+(full?" full":"")); b.type="button";
       var l = el("span"); l.appendChild(el("b",null,name)); l.appendChild(el("small",null,blurb));
       b.appendChild(l); b.appendChild(el("span","n", n+" questions"));
-      b.addEventListener("click", function(){ begin(id); });
+      b.addEventListener("click", function(){ begin(id, id === "full"); });
       list.appendChild(b);
     }
     SECTIONS.forEach(function(s){
       add(s.id, s.name, s.blurb, QUESTIONS.filter(function(q){ return q.s===s.id; }).length, false);
     });
-    add("full","Full menu test","Practice: a random mix from every section", Math.min(FULL_COUNT, QUESTIONS.length), true);
+    add("full","Full menu test","Practice run: a random mix from every section, not saved", Math.min(FULL_COUNT, QUESTIONS.length), true);
   }
 
-  function begin(sec){
+  function begin(sec, practice){
     var pool = sec==="full" ? shuffle(QUESTIONS).slice(0, FULL_COUNT) : shuffle(QUESTIONS.filter(function(q){ return q.s===sec; }));
-    state = { sec:sec, qs:pool, i:0, right:0, missed:[], record:null };
+    state = { sec:sec, qs:pool, i:0, right:0, missed:[], record:null, practice:!!practice };
+    $("modeNote").hidden = !practice;
     show("quiz"); renderQ();
   }
 
@@ -151,17 +155,28 @@
       d.appendChild(el("div","c","Correct answer: "+m.c)); d.appendChild(el("div","muted",m.e));
       ml.appendChild(d);
     });
-    show("result"); save();
+    show("result");
+    if(state.practice){
+      $("rSave").className = "note"; $("rSave").textContent = "This was a practice run. Nothing was saved to your profile."; $("rRetrySave").hidden = true;
+      $("rLine").textContent = state.right+" of "+total+" correct. "+(pass ? "That would be a pass. You look ready for the real test." : "The pass mark is "+PASS+"%. Read through the ones below, then have another go.");
+      $("retry").textContent = "Practise again"; $("realTest").hidden = false; $("realTest").href = "glenorchy-menu.html#" + state.sec;
+    } else { $("realTest").hidden = true; save(); }
   }
 
   $("next").addEventListener("click", function(){ state.i++; if(state.i<state.qs.length) renderQ(); else finish(); });
   $("quit").addEventListener("click", function(){ show("start"); });
-  $("retry").addEventListener("click", function(){ begin(state.sec); });
+  $("retry").addEventListener("click", function(){ begin(state.sec, state.practice); });
+  $("realTest").addEventListener("click", function(e){ e.preventDefault(); begin(state.sec, false); });
   $("rRetrySave").addEventListener("click", save);
 
   renderStart();
-  var want = location.hash.replace("#","");
-  if(known(want)) begin(want); else show("start");
+  function route(){
+    var want = location.hash.replace("#",""), practice = want.indexOf("practice-") === 0;
+    if(practice) want = want.slice(9);
+    if(known(want)) begin(want, practice); else show("start");
+  }
+  window.addEventListener("hashchange", route);
+  route();
 })();
 </script>
 </body>
