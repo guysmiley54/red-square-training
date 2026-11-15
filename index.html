@@ -4,21 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Red Square Staff Training</title>
-<style>
-:root{--paper:#fbfaf7;--card:#fff;--ink:#151515;--muted:#5d5b57;--red:#c8201f}
-@media (prefers-color-scheme:dark){:root{--paper:#141312;--card:#1e1d1b;--ink:#f3f1ec;--muted:#a9a59d;--red:#ff5a52;color-scheme:dark}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45}
-.wrap{max-width:680px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:20px}
-header{border-bottom:3px solid var(--ink);padding-bottom:12px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
-.sq{width:14px;height:14px;background:var(--red)}
-h1{font-size:30px;line-height:1.1;margin:4px 0 0;font-weight:900}
-a.test{display:block;background:var(--card);border:2px solid var(--ink);padding:14px;color:inherit;text-decoration:none}
-a.test:hover,a.test:focus-visible{box-shadow:4px 4px 0 var(--ink);outline:none}
-a.test b{display:block;font-size:17px}
-a.test span{color:var(--muted);font-size:14px}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
 </head>
 <body>
 <div class="wrap">
@@ -26,7 +14,269 @@ a.test span{color:var(--muted);font-size:14px}
     <div class="brand"><span class="sq"></span>Red Square Cafe</div>
     <h1>Staff Training</h1>
   </header>
-  <a class="test" href="glenorchy-menu.html"><b>Glenorchy Menu Test</b><span>Dishes, ingredients, add-ons, pricing policy, dietary and drinks</span></a>
+
+  <!-- SIGN IN -->
+  <section id="signin" class="stack" hidden>
+    <p><span class="marker">Sign in to your training</span></p>
+    <form id="signinForm" class="stack" autocomplete="off">
+      <div class="stack" style="gap:6px">
+        <label for="name">Your name</label>
+        <input type="text" id="name" placeholder="First and last name, as on the roster" autocomplete="off">
+      </div>
+      <div class="stack" style="gap:6px">
+        <label for="pin">Your 4-digit PIN</label>
+        <input type="password" id="pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Leave empty if this is your first time">
+      </div>
+      <p class="err" id="signinErr" hidden></p>
+      <div><button class="btn" id="signinBtn" type="submit">Sign in</button></div>
+    </form>
+  </section>
+
+  <!-- FIRST TIME: CHOOSE A PIN -->
+  <section id="setpin" class="stack" hidden>
+    <h2>Choose your PIN</h2>
+    <p>Welcome, <b id="setpinName"></b>. Pick a 4-digit PIN that only you know. You will use it every time you sign in. Do not reuse your bank PIN.</p>
+    <form id="setpinForm" class="stack" autocomplete="off">
+      <div class="stack" style="gap:6px">
+        <label for="newPin">New PIN</label>
+        <input type="password" id="newPin" inputmode="numeric" maxlength="4" autocomplete="off">
+      </div>
+      <div class="stack" style="gap:6px">
+        <label for="newPin2">Type it again</label>
+        <input type="password" id="newPin2" inputmode="numeric" maxlength="4" autocomplete="off">
+      </div>
+      <p class="err" id="setpinErr" hidden></p>
+      <div class="row"><button class="btn" id="setpinBtn" type="submit">Save PIN and sign in</button>
+        <button class="btn ghost" id="setpinBack" type="button">Back</button></div>
+    </form>
+  </section>
+
+  <!-- SIGNED IN -->
+  <section id="home" class="stack" hidden>
+    <div class="who"><span>Signed in as <b id="whoName"></b> <span class="muted" id="whoMeta"></span></span>
+      <button class="btn ghost small" id="signout" type="button">Sign out</button></div>
+    <div class="tabs" id="tabs" role="tablist" hidden>
+      <button type="button" role="tab" id="tabMine" aria-selected="true">My training</button>
+      <button type="button" role="tab" id="tabCrew" aria-selected="false">My crew</button>
+    </div>
+    <p class="muted" id="loading">Loading...</p>
+    <p class="err" id="homeErr" hidden></p>
+
+    <!-- my training -->
+    <div id="mine" class="stack" hidden>
+      <div id="mineAlert"></div>
+      <h2>Tests to pass</h2>
+      <div id="mineTests" class="stack" style="gap:10px"></div>
+      <div id="mineExtra" class="stack" style="gap:10px"></div>
+      <h2>My attempts</h2>
+      <div class="scroll"><table id="mineAttempts"></table></div>
+    </div>
+
+    <!-- crew list -->
+    <div id="crew" class="stack" hidden>
+      <div id="crewAlert"></div>
+      <h2>Crew</h2>
+      <div class="scroll"><table id="crewTable"></table></div>
+      <p class="note">Select a name to see their tests, dates and scores.</p>
+    </div>
+
+    <!-- one crew member -->
+    <div id="person" class="stack" hidden>
+      <div><button class="btn ghost small" id="personBack" type="button">Back to crew</button></div>
+      <div class="row between"><h2 id="personName"></h2><span id="personPill"></span></div>
+      <p class="muted" id="personMeta"></p>
+      <div id="personAlert"></div>
+      <h3>Required tests</h3>
+      <div class="scroll"><table id="personTests"></table></div>
+      <h3>All attempts</h3>
+      <div class="scroll"><table id="personAttempts"></table></div>
+    </div>
+  </section>
 </div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  var T = window.Training, el = T.el;
+  var $ = function(id){ return document.getElementById(id); };
+  var passMark = 80, crewData = null, pendingName = "";
+
+  function show(id){ ["signin","setpin","home"].forEach(function(s){ $(s).hidden = s !== id; }); window.scrollTo(0,0); }
+  function setErr(id, msg){ $(id).textContent = msg || ""; $(id).hidden = !msg; }
+  function busy(btn, on, label){ btn.disabled = on; if(label) btn.textContent = label; }
+  function pill(cls, text){ return el("span", "pill " + cls, text); }
+  function clear(node){ node.innerHTML = ""; return node; }
+  function row(cells, head){ var r = el("tr"); cells.forEach(function(c){ var td = el(head ? "th" : "td"); if(c instanceof Node) td.appendChild(c); else td.textContent = c == null ? "" : c; r.appendChild(td); }); return r; }
+
+  /* ---------- sign in ---------- */
+  function signedIn(res){ T.setSession(res.token, res.profile); $("pin").value = ""; openHome(); }
+
+  $("signinForm").addEventListener("submit", function(e){
+    e.preventDefault(); setErr("signinErr");
+    var name = $("name").value.trim(), pin = $("pin").value.trim();
+    if(!name){ setErr("signinErr", "Enter your name."); return; }
+    busy($("signinBtn"), true, "Signing in...");
+    T.api("login", {name:name, pin:pin}).then(signedIn).catch(function(err){
+      if(err.needPin){ pendingName = name; $("setpinName").textContent = name; $("newPin").value = ""; $("newPin2").value = ""; setErr("setpinErr"); show("setpin"); $("newPin").focus(); }
+      else setErr("signinErr", err.message);
+    }).then(function(){ busy($("signinBtn"), false, "Sign in"); });
+  });
+
+  $("setpinForm").addEventListener("submit", function(e){
+    e.preventDefault(); setErr("setpinErr");
+    var a = $("newPin").value.trim(), b = $("newPin2").value.trim();
+    if(!/^\d{4}$/.test(a)){ setErr("setpinErr", "Your PIN must be 4 digits."); return; }
+    if(a !== b){ setErr("setpinErr", "Those two PINs do not match."); return; }
+    busy($("setpinBtn"), true, "Saving...");
+    T.api("login", {name:pendingName, newPin:a}).then(signedIn).catch(function(err){ setErr("setpinErr", err.message); })
+      .then(function(){ busy($("setpinBtn"), false, "Save PIN and sign in"); });
+  });
+  $("setpinBack").addEventListener("click", function(){ show("signin"); });
+  $("signout").addEventListener("click", T.signOut);
+
+  /* ---------- status wording ---------- */
+  function testPill(t){
+    if(t.state === "passed") return pill("pass", "Passed " + t.best + "%");
+    if(t.state === "overdue") return pill("fail", "Overdue");
+    if(t.state === "retest") return pill("warn", "Re-test");
+    return pill("plain", "To do");
+  }
+  function testLine(t){
+    if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
+    var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
+    if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
+    return last + "Due " + T.fmtDate(t.due);
+  }
+  function memberPill(f){
+    if(f.behind.length) return pill("fail", "Behind");
+    if(f.poor.length) return pill("warn", "Needs help");
+    if(f.required && f.passed === f.required) return pill("pass", "Complete");
+    return pill("plain", "On track");
+  }
+  function flagLines(name, f){
+    var out = [];
+    if(f.behind.length) out.push(name + " behind on " + f.behind.length + " of " + f.required + " tests: " + f.behind.join(", "));
+    f.poor.forEach(function(p){ out.push(name + " scored " + p.pct + "% on " + p.title + (p.failsInRow > 1 ? ", " + p.failsInRow + " fails in a row" : "")); });
+    return out;
+  }
+  function alertBox(node, lines, okText){
+    clear(node);
+    if(!lines.length){ if(okText){ var ok = el("div", "alert ok"); ok.appendChild(el("b", null, okText)); node.appendChild(ok); } return; }
+    var box = el("div", "alert"); box.appendChild(el("b", null, lines.length === 1 ? "1 thing needs attention" : lines.length + " things need attention"));
+    var ul = el("ul"); lines.forEach(function(l){ ul.appendChild(el("li", null, l)); }); box.appendChild(ul); node.appendChild(box);
+  }
+  function attemptsTable(table, attempts, showMissed){
+    clear(table);
+    if(!attempts.length){ table.appendChild(row(["No attempts yet."])); return; }
+    table.appendChild(row(showMissed ? ["When","Test","Score","Result","Questions missed"] : ["When","Test","Score","Result"], true));
+    attempts.forEach(function(a){
+      var cells = [T.fmtDateTime(a.when), a.test + ": " + a.section, a.right + "/" + a.total + " (" + a.pct + "%)", a.pct >= passMark ? pill("pass","Pass") : pill("fail","Re-test")];
+      if(showMissed) cells.push(a.missed ? a.missed.split(" | ").join("; ") : "None");
+      table.appendChild(row(cells));
+    });
+  }
+
+  /* ---------- my training ---------- */
+  function openHome(){
+    var s = T.getSession(); if(!s){ show("signin"); return; }
+    show("home"); T.watchIdle();
+    $("whoName").textContent = s.profile.name;
+    $("whoMeta").textContent = [s.profile.venue, s.profile.role === "Crew" ? "" : s.profile.role].filter(Boolean).join(" · ");
+    var manager = s.profile.role !== "Crew";
+    $("tabs").hidden = !manager;
+    ["mine","crew","person"].forEach(function(x){ $(x).hidden = true; });
+    $("loading").hidden = false; setErr("homeErr");
+    T.api("me").then(function(res){
+      passMark = res.passMark || 80; $("loading").hidden = true; renderMine(res); selectTab(manager && location.hash === "#crew" ? "crew" : "mine");
+    }).catch(function(err){
+      $("loading").hidden = true;
+      if(!T.getSession()){ show("signin"); setErr("signinErr", err.message); } else setErr("homeErr", err.message);
+    });
+  }
+
+  function renderMine(res){
+    var mine = res.tests.filter(function(t){ return t.state !== "passed"; });
+    var lines = [];
+    res.tests.forEach(function(t){
+      if(t.state === "overdue") lines.push(t.title + " was due " + T.fmtDate(t.due));
+      else if(t.state === "retest") lines.push(t.title + " needs a re-test. Your last score was " + t.latestPct + "%");
+    });
+    alertBox($("mineAlert"), lines, res.tests.length && !mine.length ? "You have passed every required test." : "");
+    var list = clear($("mineTests"));
+    if(!res.tests.length) list.appendChild(el("p", "muted", "No tests have been assigned to you yet."));
+    res.tests.forEach(function(t){
+      var item = el("div", "item"), left = el("div");
+      left.appendChild(el("div", "t", t.title)); left.appendChild(el("div", "note", testLine(t)));
+      var right = el("div", "row"); right.appendChild(testPill(t));
+      var link = T.testLink(t.key);
+      if(link){ var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.tries ? "Re-test" : "Start")); a.href = link; right.appendChild(a); }
+      item.appendChild(left); item.appendChild(right); list.appendChild(item);
+    });
+    var extra = clear($("mineExtra"));
+    if(res.tests.some(function(t){ return t.key.indexOf("glenorchy-menu:") === 0; })){
+      var full = el("a", "sec full"); full.href = "glenorchy-menu.html#full";
+      var l = el("span"); l.appendChild(el("b", null, "Glenorchy full menu test")); l.appendChild(el("small", null, "Practice: a random mix from every section"));
+      full.appendChild(l); full.appendChild(el("span", "n", "30 questions")); extra.appendChild(full);
+    }
+    attemptsTable($("mineAttempts"), res.attempts, false);
+  }
+
+  /* ---------- crew ---------- */
+  function selectTab(which){
+    $("tabMine").setAttribute("aria-selected", which === "mine"); $("tabCrew").setAttribute("aria-selected", which === "crew");
+    $("mine").hidden = which !== "mine"; $("crew").hidden = which !== "crew"; $("person").hidden = true;
+    if(which === "crew") loadCrew();
+  }
+  $("tabMine").addEventListener("click", function(){ selectTab("mine"); });
+  $("tabCrew").addEventListener("click", function(){ selectTab("crew"); });
+
+  function loadCrew(){
+    setErr("homeErr");
+    if(crewData){ renderCrew(); return; }
+    $("loading").hidden = false; $("crew").hidden = true;
+    T.api("crew").then(function(res){ crewData = res.crew; passMark = res.passMark || passMark; $("loading").hidden = true; $("crew").hidden = false; renderCrew(); })
+      .catch(function(err){ $("loading").hidden = true; setErr("homeErr", err.message); });
+  }
+
+  function lastActivity(m){ return m.attempts.length ? T.fmtDate(m.attempts[0].when) : "Never"; }
+  function rank(m){ return m.flags.behind.length ? 0 : (m.flags.poor.length ? 1 : (m.flags.passed === m.flags.required ? 3 : 2)); }
+
+  function renderCrew(){
+    var lines = []; crewData.forEach(function(m){ lines = lines.concat(flagLines(m.name, m.flags)); });
+    alertBox($("crewAlert"), lines, crewData.length ? "Nobody is behind or struggling." : "");
+    var table = clear($("crewTable"));
+    if(!crewData.length){ table.appendChild(row(["No crew are listed for your venue yet."])); return; }
+    table.appendChild(row(["Name","Venue","Passed","Status","Last test"], true));
+    crewData.slice().sort(function(a,b){ return rank(a) - rank(b) || a.name.localeCompare(b.name); }).forEach(function(m){
+      var r = row([m.name, m.venue, m.flags.passed + " of " + m.flags.required, memberPill(m.flags), lastActivity(m)]);
+      r.className = "click"; r.tabIndex = 0;
+      r.addEventListener("click", function(){ openPerson(m); });
+      r.addEventListener("keydown", function(e){ if(e.key === "Enter") openPerson(m); });
+      table.appendChild(r);
+    });
+  }
+
+  function openPerson(m){
+    $("crew").hidden = true; $("person").hidden = false; window.scrollTo(0,0);
+    $("personName").textContent = m.name; clear($("personPill")).appendChild(memberPill(m.flags));
+    $("personMeta").textContent = [m.venue, m.role, m.flags.passed + " of " + m.flags.required + " required tests passed"].join(" · ");
+    alertBox($("personAlert"), flagLines(m.name.split(" ")[0], m.flags), "");
+    var tt = clear($("personTests"));
+    if(!m.tests.length) tt.appendChild(row(["No required tests for this venue."]));
+    else {
+      tt.appendChild(row(["Test","Status","Tries","Best","Detail"], true));
+      m.tests.forEach(function(t){ tt.appendChild(row([t.title, testPill(t), t.tries, t.best == null ? "" : t.best + "%", testLine(t)])); });
+    }
+    attemptsTable($("personAttempts"), m.attempts, true);
+  }
+  $("personBack").addEventListener("click", function(){ $("person").hidden = true; $("crew").hidden = false; });
+
+  /* ---------- start ---------- */
+  if(!window.TRAINING_API){ show("signin"); setErr("signinErr", "The staff log is not connected yet, so nobody can sign in."); $("signinBtn").disabled = true; }
+  else if(T.getSession()) openHome();
+  else { show("signin"); $("name").focus(); }
+})();
+</script>
 </body>
 </html>

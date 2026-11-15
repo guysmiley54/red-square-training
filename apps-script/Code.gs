@@ -1,68 +1,325 @@
 /**
- * Staff Training Log
- * Receives test results from the training pages and adds one row per attempt to the "Attempts" tab.
+ * Red Square Staff Training — backend
  *
- * Setup: paste into Extensions > Apps Script in the log spreadsheet, then
- * Deploy > New deployment > Web app > Execute as: Me, Who has access: Anyone.
- * Copy the web app URL (ends in /exec) into LOG_URL in the training page.
+ * Standalone Apps Script project in the redsquarecafe80 Google account.
+ * Deployed as a web app (Execute as: Me, Who has access: Anyone). The /exec URL goes in config.js.
+ *
+ * The "Staff Training Log" spreadsheet holds three tabs:
+ *   Staff     one row per person. Leave the PIN column empty; each person sets their own PIN the
+ *             first time they sign in. Clear the cell to reset a forgotten PIN.
+ *   Tests     the tests each venue's crew must pass, and the date each was assigned.
+ *   Attempts  one row per test attempt (written by this script).
+ *
+ * Nobody sees anything without signing in. Crew see their own results only.
+ * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone and are not tested.
  */
-const SHEET_NAME = 'Attempts';
-const HEADERS = ['When', 'Name', 'Venue', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID'];
+const SHEET_ID = '15ax94vTHrcXj73P3CmR-hwgc7nUEBOr5kCVwXKuMbkQ'; // "Staff Training Log" spreadsheet
+const PASS_MARK = 80;       // percent
+const DUE_DAYS = 14;        // days to pass a required test after it is assigned
+const SESSION_HOURS = 4;    // how long a sign-in lasts
+const MAX_PIN_TRIES = 5;    // wrong PINs before a 15 minute lockout
+const TIMEZONE = 'Australia/Hobart';
+const SITE_URL = 'https://guysmiley54.github.io/red-square-training/';
+
+const TABS = {
+  Staff: ['Name', 'Venue', 'Role', 'Email', 'Start date', 'Active', 'PIN (set by staff, clear to reset)'],
+  Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned'],
+  Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID']
+};
+const SEED_TESTS = [
+  ['glenorchy-menu:breakfast', 'Glenorchy menu: Breakfast dishes'],
+  ['glenorchy-menu:lunch', 'Glenorchy menu: Lunch, burgers and lighter options'],
+  ['glenorchy-menu:ingredients', 'Glenorchy menu: Tricky ingredients'],
+  ['glenorchy-menu:addons', 'Glenorchy menu: Add-ons and pricing policy'],
+  ['glenorchy-menu:dietary', 'Glenorchy menu: Dietary and allergens'],
+  ['glenorchy-menu:drinks', 'Glenorchy menu: Drinks']
+];
+
+/* ---------- web app entry ---------- */
 
 function doPost(e) {
-  const lock = LockService.getScriptLock();
+  let out;
   try {
-    lock.waitLock(15000);
-    const d = JSON.parse(e.postData.contents);
-    const sh = getSheet_();
-
-    // The page re-sends an attempt if it never hears back, so skip one that is already logged.
-    const id = clean_(d.id, 40);
-    const last = sh.getLastRow();
-    if (id && last > 1) {
-      const from = Math.max(2, last - 499);
-      const ids = sh.getRange(from, HEADERS.length, last - from + 1, 1).getValues();
-      if (ids.some(function (r) { return r[0] === id; })) return json_({ ok: true, duplicate: true });
-    }
-
-    const right = Number(d.right) || 0;
-    const total = Number(d.total) || 0;
-    const pct = total ? Math.round(right / total * 100) : 0;
-    const pass = Number(d.pass) || 80;
-    const missed = Array.isArray(d.missed) ? d.missed.map(function (m) { return clean_(m, 200); }).join(' | ') : '';
-
-    sh.appendRow([
-      d.t ? new Date(Number(d.t)) : new Date(),
-      clean_(d.name, 80), clean_(d.venue, 40), clean_(d.test, 40), clean_(d.section, 80),
-      right, total, pct, pct >= pass ? 'Pass' : 'Re-test', clean_(missed, 5000), id
-    ]);
-    return json_({ ok: true });
+    out = route_(JSON.parse(e.postData.contents));
   } catch (err) {
-    return json_({ ok: false, error: String(err) });
-  } finally {
-    try { lock.releaseLock(); } catch (ignore) {}
+    out = { ok: false, error: String((err && err.message) || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function route_(req) {
+  switch (req.action) {
+    case 'login': return login_(req);
+    case 'me': return me_(auth_(req));
+    case 'attempt': return attempt_(auth_(req), req);
+    case 'crew': return crew_(auth_(req));
+    default: throw new Error('Unknown request.');
   }
 }
 
-function getSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(SHEET_NAME);
+/* ---------- sign-in ---------- */
+
+function login_(req) {
+  const name = norm_(req.name);
+  const pin = String(req.pin == null ? '' : req.pin);
+  const cache = CacheService.getScriptCache();
+  const failKey = 'fail:' + name;
+  const fails = Number(cache.get(failKey)) || 0;
+  if (fails >= MAX_PIN_TRIES) return { ok: false, error: 'Too many wrong tries. Wait 15 minutes, or ask your manager to reset your PIN.' };
+  const miss = function () {
+    cache.put(failKey, String(fails + 1), 900);
+    return { ok: false, error: 'That name and PIN do not match. Check the spelling of your name.' };
+  };
+
+  const staff = findStaff_(name);
+  if (!staff) return miss();
+
+  if (!staff.pinHash) {
+    // First sign-in: the person chooses their own PIN.
+    const newPin = String(req.newPin == null ? '' : req.newPin);
+    if (!newPin) return { ok: false, needPin: true };
+    if (!/^\d{4}$/.test(newPin)) return { ok: false, needPin: true, error: 'Your PIN must be 4 digits.' };
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+    try {
+      const again = findStaff_(name);
+      if (again.pinHash) return { ok: false, error: 'A PIN has already been set for this name. Ask your manager to reset it.' };
+      setCell_('Staff', staff.row, TABS.Staff.length, hashPin_(name, newPin));
+    } finally { lock.releaseLock(); }
+  } else {
+    if (!/^\d{4}$/.test(pin) || hashPin_(name, pin) !== staff.pinHash) return miss();
+  }
+  cache.remove(failKey);
+  return { ok: true, token: makeToken_(name), profile: profile_(staff) };
+}
+
+function auth_(req) {
+  const name = readToken_(req.token);
+  const staff = name && findStaff_(name);
+  if (!staff) throw new Error('Please sign in again.');
+  return staff;
+}
+
+function hashPin_(name, pin) {
+  return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, secret_('SALT') + '|' + name + '|' + pin));
+}
+
+function makeToken_(name) {
+  const payload = name + '|' + (Date.now() + SESSION_HOURS * 3600 * 1000);
+  return Utilities.base64EncodeWebSafe(payload) + '.' + sign_(payload);
+}
+
+function readToken_(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 2) return null;
+  let payload;
+  try { payload = Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString(); } catch (e) { return null; }
+  if (sign_(payload) !== parts[1]) return null;
+  const cut = payload.lastIndexOf('|');
+  if (Number(payload.slice(cut + 1)) < Date.now()) return null;
+  return payload.slice(0, cut);
+}
+
+function sign_(payload) {
+  return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(payload, secret_('SECRET')));
+}
+
+// Random values kept in Script Properties, created the first time they are needed.
+function secret_(key) {
+  const props = PropertiesService.getScriptProperties();
+  let v = props.getProperty(key);
+  if (!v) { v = Utilities.getUuid() + Utilities.getUuid(); props.setProperty(key, v); }
+  return v;
+}
+
+function hex_(bytes) {
+  return bytes.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+
+/* ---------- requests ---------- */
+
+function me_(staff) {
+  const data = load_();
+  return { ok: true, profile: profile_(staff), passMark: PASS_MARK, tests: status_(staff, data, new Date()), attempts: attemptsFor_(staff, data) };
+}
+
+function attempt_(staff, req) {
+  const right = Math.max(0, Number(req.right) || 0);
+  const total = Math.max(0, Number(req.total) || 0);
+  if (!total || right > total) throw new Error('That result could not be read.');
+  const pct = Math.round(right / total * 100);
+  const key = clean_(req.testId, 40) + ':' + clean_(req.sectionId, 40);
+  const id = clean_(req.id, 40);
+  const missed = Array.isArray(req.missed) ? req.missed.map(function (m) { return clean_(m, 200); }).join(' | ') : '';
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    // The page re-sends if it never hears back, so skip an attempt that is already logged.
+    const rows = readTab_('Attempts');
+    const idCol = TABS.Attempts.length - 1;
+    if (id && rows.slice(-500).some(function (r) { return r[idCol] === id; })) return { ok: true, duplicate: true };
+    appendRow_('Attempts', [new Date(), staff.name, staff.venueText, key, clean_(req.test, 60), clean_(req.section, 80),
+      right, total, pct, pct >= PASS_MARK ? 'Pass' : 'Re-test', clean_(missed, 5000), id]);
+  } finally { lock.releaseLock(); }
+  return { ok: true, pct: pct, passed: pct >= PASS_MARK };
+}
+
+function crew_(viewer) {
+  if (viewer.role === 'Crew') throw new Error('The crew view is for managers.');
+  const data = load_();
+  const now = new Date();
+  return { ok: true, passMark: PASS_MARK, crew: crewOf_(viewer, data).map(function (s) { return member_(s, data, now); }) };
+}
+
+/* ---------- status rules ---------- */
+
+function crewOf_(viewer, data) {
+  return data.staff.filter(function (s) {
+    if (s.role === 'Owner') return false; // owners are not tested, so they never appear in a crew list
+    if (viewer.role === 'Owner') return true;
+    return s.venues.some(function (v) { return viewer.venues.indexOf(v) !== -1 || v === 'all' || viewer.venues.indexOf('all') !== -1; });
+  });
+}
+
+function member_(s, data, now) {
+  const tests = status_(s, data, now);
+  return { name: s.name, venue: s.venueText, role: s.role, tests: tests, flags: flags_(tests), attempts: attemptsFor_(s, data) };
+}
+
+// One entry per required test that applies to this person.
+function status_(staff, data, now) {
+  if (staff.role === 'Owner') return [];
+  const mine = data.attempts.filter(function (a) { return norm_(a.name) === staff.key; });
+  return data.tests.filter(function (t) {
+    return t.required && (t.venue === 'all' || staff.venues.indexOf('all') !== -1 || staff.venues.indexOf(t.venue) !== -1);
+  }).map(function (t) {
+    const at = mine.filter(function (a) { return a.key === t.key; });
+    const passes = at.filter(function (a) { return a.pct >= PASS_MARK; });
+    const latest = at.length ? at[at.length - 1] : null;
+    let failsInRow = 0;
+    for (let i = at.length - 1; i >= 0 && at[i].pct < PASS_MARK; i--) failsInRow++;
+    const from = Math.max(t.assigned ? t.assigned.getTime() : 0, staff.start ? staff.start.getTime() : 0) || now.getTime();
+    const due = new Date(from + DUE_DAYS * 86400000);
+    const passed = passes.length > 0;
+    return {
+      key: t.key, title: t.title,
+      state: passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (latest ? 'retest' : 'todo')),
+      due: due.toISOString(),
+      passedOn: passed ? passes[0].when.toISOString() : null,
+      best: at.length ? Math.max.apply(null, at.map(function (a) { return a.pct; })) : null,
+      tries: at.length,
+      latestPct: latest ? latest.pct : null,
+      latestWhen: latest ? latest.when.toISOString() : null,
+      failsInRow: failsInRow
+    };
+  });
+}
+
+// Behind: a required test not passed by its due date. Poor: the latest attempt at a test is under the pass mark.
+function flags_(tests) {
+  const behind = tests.filter(function (t) { return t.state === 'overdue'; });
+  const poor = tests.filter(function (t) { return t.failsInRow > 0; });
+  return {
+    required: tests.length,
+    passed: tests.filter(function (t) { return t.state === 'passed'; }).length,
+    behind: behind.map(function (t) { return t.title; }),
+    poor: poor.map(function (t) { return { title: t.title, pct: t.latestPct, failsInRow: t.failsInRow }; })
+  };
+}
+
+function attemptsFor_(staff, data) {
+  return data.attempts.filter(function (a) { return norm_(a.name) === staff.key; }).map(function (a) {
+    return { when: a.when.toISOString(), key: a.key, test: a.test, section: a.section, right: a.right, total: a.total, pct: a.pct, missed: a.missed };
+  }).reverse();
+}
+
+function profile_(s) { return { name: s.name, venue: s.venueText, role: s.role }; }
+
+/* ---------- weekly email to managers ---------- */
+
+// Run installWeeklyEmail() once from the editor to switch this on.
+function weeklyDigest() {
+  const data = load_();
+  const now = new Date();
+  data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
+    const lines = [];
+    crewOf_(m, data).forEach(function (s) {
+      const f = flags_(status_(s, data, now));
+      if (f.behind.length) lines.push(s.name + ' is behind on ' + f.behind.length + ' of ' + f.required + ' tests: ' + f.behind.join(', '));
+      f.poor.forEach(function (p) {
+        lines.push(s.name + ' scored ' + p.pct + '% on ' + p.title + (p.failsInRow > 1 ? ' (' + p.failsInRow + ' fails in a row)' : ''));
+      });
+    });
+    if (!lines.length) return;
+    MailApp.sendEmail(m.email, 'Staff training: ' + lines.length + ' to follow up',
+      'Hi ' + m.name.split(' ')[0] + ',\n\nThese need a follow up this week:\n\n- ' + lines.join('\n- ') +
+      '\n\nThe pass mark is ' + PASS_MARK + '% and each test is due ' + DUE_DAYS + ' days after it is assigned.\n\nCrew view: ' + SITE_URL + '\n');
+  });
+}
+
+function installWeeklyEmail() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'weeklyDigest') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('weeklyDigest').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(8).inTimezone(TIMEZONE).create();
+}
+
+// Run once from the editor to create the tabs. Also happens on the first request.
+function setup() { Object.keys(TABS).forEach(function (n) { sheet_(n); }); }
+
+/* ---------- sheet access ---------- */
+
+function load_() {
+  return { staff: staffList_(), tests: readTab_('Tests').filter(function (r) { return r[0]; }).map(function (r) {
+    return { key: String(r[0]).trim(), title: String(r[1] || r[0]), venue: norm_(r[2]) || 'all', required: !/^n/i.test(String(r[3]).trim()), assigned: date_(r[4]) };
+  }), attempts: readTab_('Attempts').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
+    return { when: date_(r[0]) || new Date(0), name: String(r[1]), key: String(r[3]), test: String(r[4]), section: String(r[5]),
+      right: Number(r[6]) || 0, total: Number(r[7]) || 0, pct: Number(r[8]) || 0, missed: String(r[10] || '') };
+  }).sort(function (a, b) { return a.when - b.when; }) };
+}
+
+function staffList_() {
+  return readTab_('Staff').map(function (r, i) {
+    const role = /^own/i.test(String(r[2]).trim()) ? 'Owner' : (/^man/i.test(String(r[2]).trim()) ? 'Manager' : 'Crew');
+    return { row: i + 2, name: String(r[0]).trim(), key: norm_(r[0]), venueText: String(r[1]).trim(),
+      venues: String(r[1]).split(',').map(norm_).filter(String), role: role, email: String(r[3] || '').trim(),
+      start: date_(r[4]), active: !/^n/i.test(String(r[5]).trim()), pinHash: String(r[6] || '').trim() };
+  }).filter(function (s) { return s.key && s.active; });
+}
+
+function findStaff_(name) {
+  const hits = staffList_().filter(function (s) { return s.key === name; });
+  return hits.length === 1 ? hits[0] : null; // two people with the same name must be told apart in the sheet
+}
+
+function sheet_(name) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(HEADERS);
+    sh = ss.insertSheet(name);
+    sh.appendRow(TABS[name]);
     sh.setFrozenRows(1);
-    sh.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    sh.getRange(1, 1, 1, TABS[name].length).setFontWeight('bold');
+    if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date()]); });
   }
   return sh;
 }
 
+function readTab_(name) { return sheet_(name).getDataRange().getValues().slice(1); }
+function appendRow_(name, row) { sheet_(name).appendRow(row); }
+function setCell_(name, row, col, value) { sheet_(name).getRange(row, col).setValue(value); }
+
+/* ---------- small helpers ---------- */
+
+function norm_(v) { return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' '); }
+function date_(v) {
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
 // Text only, trimmed to length, and never treated as a formula by Sheets.
 function clean_(v, max) {
   let s = String(v == null ? '' : v).trim().slice(0, max);
   if (/^[=+\-@]/.test(s)) s = "'" + s;
   return s;
-}
-
-function json_(o) {
-  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }

@@ -2,8 +2,26 @@
 
 Staff knowledge tests for Red Square Cafe, hosted on GitHub Pages.
 
-- `index.html` lists the tests
-- `glenorchy-menu.html` is the Glenorchy menu test (September 2026 menu)
-- `apps-script/Code.gs` goes in the Staff Training Log Google Sheet and receives results
+Everyone signs in with their name and a 4-digit PIN. Crew see their own tests and results. Managers also get a crew view for their venue, with flags for anyone behind or scoring under the pass mark. Owners see every venue.
 
-To connect the log, deploy `Code.gs` as a web app and paste its `/exec` URL into `LOG_URL` near the bottom of each test page.
+## Files
+
+- `index.html` sign-in, My training, and the manager crew view
+- `glenorchy-menu.html` + `glenorchy-menu.questions.js` the Glenorchy menu test (September 2026 menu)
+- `common.js`, `common.css` shared sign-in session and styling
+- `config.js` the address of the Apps Script web app
+- `apps-script/Code.gs` the backend. It lives in the "Staff Training Log" Apps Script project (redsquarecafe80 Google account) and reads and writes the "Staff Training Log" spreadsheet
+
+## The spreadsheet
+
+- **Staff**: Name, Venue, Role (Crew, Manager or Owner), Email, Start date, Active. Leave the PIN column empty. Each person picks their PIN on first sign-in. Clear the cell to reset it. Venue can list more than one, separated by commas, or `All`.
+- **Tests**: the tests each venue must pass and the date they were assigned. A test is due 14 days after it is assigned, or 14 days after the person's start date if that is later.
+- **Attempts**: one row per attempt, written by the script.
+
+## Rules
+
+- Pass mark 80%.
+- Behind: a required test not passed by its due date.
+- Needs help: the latest attempt at a test is under the pass mark.
+- Owners are not tested and do not appear in crew lists.
+- Weekly email to managers with an Email set: run `installWeeklyEmail` once in the Apps Script editor.
