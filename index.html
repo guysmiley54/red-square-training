@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115p">
+<link rel="stylesheet" href="common.css?v=20261115q">
 </head>
 <body>
 <div class="wrap">
@@ -97,8 +97,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115p"></script>
-<script src="common.js?v=20261115p"></script>
+<script src="config.js?v=20261115q"></script>
+<script src="common.js?v=20261115q"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -148,15 +148,15 @@
 
   /* ---------- status wording ---------- */
   function testPill(t){
-    if(t.state === "passed") return pill("pass", "Passed " + t.best + "%");
+    if(t.state === "passed") return pill("pass", "\u2713 " + t.best + "%");
     if(t.state === "untrained") return pill("plain", "Not trained yet");
-    if(t.state === "overdue") return pill("fail", "Overdue");
-    if(t.state === "retest") return pill("warn", "Re-test");
+    if(t.state === "overdue") return pill("fail", "Overdue" + (t.tries ? " \u00b7 " + t.best + "%" : ""));
+    if(t.state === "retest") return pill("warn", "Re-test \u00b7 " + t.best + "%");
     if(t.state === "refresh") return pill("warn", "Refresher due");
     return pill("plain", "To do");
   }
   function testLine(t){
-    if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.refreshOn ? ". Refresher from " + T.fmtDate(t.refreshOn) : "") + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
+    if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.tries > 1 ? ", best of " + t.tries + " tries" : "") + (t.refreshOn ? ". Refresher from " + T.fmtDate(t.refreshOn) : "") + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
     if(t.state === "refresh") return "Last passed " + T.fmtDate(t.passedOn) + ". Refresher due by " + T.fmtDate(t.due);
     var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
     if(t.state === "untrained") return last + "Your manager signs this off after training you on the floor. Nothing is due until then.";
@@ -167,8 +167,9 @@
   }
   function guideLine(t){
     if(!t.guideOn) return "Guide not read yet";
+    var tick = "\u2713 ";
     var n = t.guideSecs || 0;
-    return "Guide read " + T.fmtDate(t.guideOn) + " (" + Math.floor(n / 60) + ":" + (n % 60 < 10 ? "0" : "") + (n % 60) + ")";
+    return tick + "Guide read " + T.fmtDate(t.guideOn) + " (" + Math.floor(n / 60) + ":" + (n % 60 < 10 ? "0" : "") + (n % 60) + ")";
   }
   function memberPill(f){
     if(f.behind.length) return pill("fail", "Behind");
@@ -242,7 +243,7 @@
         var sec = t.key.split(":")[1], page = link.split("#")[0];
         var learn = el("a", "btn small ghost", "Learn"); learn.href = page.replace(".html", "-learn.html") + "#" + sec; right.appendChild(learn);
         var prac = el("a", "btn small ghost", "Practice"); prac.href = page + "#practice-" + sec; right.appendChild(prac);
-        var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.state === "refresh" ? "Sit refresher" : (t.tries ? "Re-test" : "Sit test"))); a.href = link; right.appendChild(a);
+        var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? (t.best < 100 ? "Improve your score" : "Sit again") : (t.state === "refresh" ? "Sit refresher" : (t.tries ? "Try again" : "Sit test"))); a.href = link; right.appendChild(a);
       }
       item.appendChild(left); item.appendChild(right); list.appendChild(item);
     });
