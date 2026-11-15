@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glenorchy Menu Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one narrow phone-first column, printed-menu feel: black rules, marker-pen highlights */
+:root{
+  --paper:#fbfaf7; --card:#ffffff; --ink:#151515; --muted:#5d5b57; --rule:#d9d6cf;
+  --red:#c8201f; --hi:#ffe14a; --hi-ink:#151515;
+  --good:#1d7a45; --good-bg:#e4f4ea; --bad:#b3261e; --bad-bg:#fbe7e5;
+  --display:"Red Hat Display",system-ui,sans-serif;
+  --body:"Red Hat Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --marker:"Permanent Marker","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#141312; --card:#1e1d1b; --ink:#f3f1ec; --muted:#a9a59d; --rule:#3a3835;
+    --red:#ff5a52; --hi:#ffe14a; --hi-ink:#151515;
+    --good:#6fd39a; --good-bg:#16301f; --bad:#ff8a80; --bad-bg:#3a1b19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141312; --card:#1e1d1b; --ink:#f3f1ec; --muted:#a9a59d; --rule:#3a3835;
+  --red:#ff5a52; --hi:#ffe14a; --hi-ink:#151515;
+  --good:#6fd39a; --good-bg:#16301f; --bad:#ff8a80; --bad-bg:#3a1b19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:4px;border-bottom:3px solid var(--ink);padding-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+.sq{width:14px;height:14px;background:var(--red);flex:none}
+h1{font-family:var(--display);font-weight:900;font-size:30px;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:900;font-size:21px;line-height:1.2;margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)}
+.marker{font-family:var(--marker);background:var(--hi);color:var(--hi-ink);padding:2px 8px;display:inline-block;transform:rotate(-1deg)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{font-weight:700;font-size:14px}
+input[type=text]{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--ink);padding:11px 12px;width:100%;border-radius:0}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.sec{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;background:var(--card);border:2px solid var(--ink);padding:13px 14px}
+.sec:hover{box-shadow:4px 4px 0 var(--ink)}
+.sec b{font-family:var(--display);font-weight:700;font-size:17px;display:block}
+.sec small{color:var(--muted);font-size:14px}
+.sec .n{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;font-size:14px}
+.sec.full{background:var(--ink);color:var(--paper)}
+.sec.full small{color:inherit;opacity:.75}
+.sec.full:hover{box-shadow:4px 4px 0 var(--red)}
+.btn{background:var(--ink);color:var(--paper);border:2px solid var(--ink);padding:12px 18px;font-weight:700}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.bar{height:6px;background:var(--rule)}
+.bar i{display:block;height:100%;background:var(--red);transition:width .2s}
+.meta{display:flex;justify-content:space-between;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:var(--card);border:2px solid var(--rule);padding:13px 14px}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt .k{font-family:var(--display);font-weight:900;flex:none;width:1.2em}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.fb{border-left:5px solid var(--ink);padding:10px 14px;background:var(--card)}
+.fb.ok{border-color:var(--good)} .fb.no{border-color:var(--bad)}
+.fb b{display:block;margin-bottom:2px}
+.score{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-weight:700;font-size:14px;padding:4px 10px;border:2px solid currentColor;text-transform:uppercase;letter-spacing:.06em}
+.pill.pass{color:var(--good)} .pill.fail{color:var(--bad)}
+.miss{border-top:1px solid var(--rule);padding-top:12px;display:flex;flex-direction:column;gap:4px}
+.miss .q{font-weight:700}
+.miss .y{color:var(--bad)} .miss .c{color:var(--good)}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.scroll{overflow-x:auto}
+.note{font-size:14px;color:var(--muted)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="sq"></span>Red Square Cafe Glenorchy</div>
+    <h1>Menu Test</h1>
+    <p class="muted">September 2026 menu. Pass mark <span id="passLabel">80</span>%.</p>
+  </header>
+
+  <!-- START -->
+  <section id="start" class="stack">
+    <div class="stack" style="gap:6px">
+      <label for="staffName">Your name</label>
+      <input type="text" id="staffName" autocomplete="name" placeholder="First and last name">
+    </div>
+    <p><span class="marker">Pick a section to start</span></p>
+    <div id="secList" class="stack" style="gap:10px"></div>
+    <div id="histBox" class="stack" hidden>
+      <h2>Attempts on this device</h2>
+      <div class="scroll"><table id="hist"></table></div>
+      <p class="note">Attempts taken on this computer.</p>
+      <div><button class="btn ghost" id="clearHist" type="button">Clear attempts</button></div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="stack" hidden>
+    <div class="meta"><span id="qSec"></span><span id="qNum"></span></div>
+    <div class="bar"><i id="qBar" style="width:0"></i></div>
+    <h2 id="qText"></h2>
+    <div id="opts" class="stack" style="gap:10px"></div>
+    <div id="fb" class="fb" hidden></div>
+    <div class="row"><button class="btn" id="next" type="button" hidden>Next question</button>
+      <button class="btn ghost" id="quit" type="button">Quit test</button></div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="stack" hidden>
+    <p class="muted" id="rWho"></p>
+    <div class="row" style="gap:16px"><span class="score" id="rPct"></span><span class="pill" id="rPill"></span></div>
+    <p id="rLine"></p>
+    <p class="note" id="rSave"></p>
+    <div class="row"><button class="btn" id="retry" type="button">Re-test this section</button>
+      <button class="btn ghost" id="home" type="button">Back to sections</button></div>
+    <div id="missBox" class="stack" hidden>
+      <h2>Questions to review</h2>
+      <div id="missList" class="stack"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Red Square Cafe Glenorchy — menu question bank (September 2026 menu)
+// First option in each list is the correct answer. Options are shuffled when shown.
+const SECTIONS = [
+  { id: "breakfast", name: "Breakfast dishes", blurb: "What goes on every breakfast plate" },
+  { id: "lunch", name: "Lunch, burgers and lighter options", blurb: "Salads, gyros, parmys, burgers and snacks" },
+  { id: "ingredients", name: "Tricky ingredients", blurb: "What they are and where they come from" },
+  { id: "addons", name: "Add-ons and pricing policy", blurb: "Sides, swaps, specials and surcharges" },
+  { id: "dietary", name: "Dietary and allergens", blurb: "Menu codes, nuts, gluten, dairy and vegan" },
+  { id: "drinks", name: "Drinks", blurb: "Shakes, coffee, tea and smoothies" }
+];
+
+const QUESTIONS = [
+  // ---------- BREAKFAST ----------
+  { s: "breakfast", q: "What comes on the Canadian Breakfast?",
+    o: ["2 pancakes, 2 bacon rashers, scrambled eggs, hash brown, maple syrup",
+        "2 pancakes, breakfast sausage, fried eggs, hash brown, maple syrup",
+        "2 pancakes, 2 bacon rashers, poached eggs, sourdough toast, maple syrup",
+        "French toast, 2 bacon rashers, scrambled eggs, maple syrup"],
+    e: "Canadian Breakfast ($25): 2 pancakes, 2 bacon rashers, scrambled eggs, hash brown and maple syrup." },
+  { s: "breakfast", q: "What is the base of the Mexican SMASH?",
+    o: ["Thick tortilla", "Sourdough toast", "Corn chips", "Brioche"],
+    e: "The Mexican SMASH is built on a thick tortilla, same as the Chilli SCRAM." },
+  { s: "breakfast", q: "Which of these is NOT on the Mexican SMASH?",
+    o: ["Hollandaise", "Smashed avocado", "Pico de gallo", "Dukkah"],
+    e: "Mexican SMASH: thick tortilla, smashed avocado, scrambled eggs, pico de gallo, herb oil, dukkah. Hollandaise is on the Chilli SCRAM." },
+  { s: "breakfast", q: "How are the eggs cooked on the Mexican SMASH?",
+    o: ["Scrambled", "Poached", "Fried", "Customer's choice"],
+    e: "Both tortilla dishes (Mexican SMASH and Chilli SCRAM) come with scrambled eggs." },
+  { s: "breakfast", q: "What bread is used for the Apple Crumble French Toast?",
+    o: ["Brioche", "Sourdough", "Thick cut fruit toast", "Croissant"],
+    e: "The French toast is brioche in an egg coating." },
+  { s: "breakfast", q: "Which list matches the Apple Crumble French Toast?",
+    o: ["Warm apple, biscuit crumb, cinnamon sugar, caramel, custard, ice cream, powdered sugar",
+        "Warm apple, biscuit crumb, maple syrup, whipped cream, powdered sugar",
+        "Warm apple, granola, caramel, vanilla yoghurt, cinnamon sugar",
+        "Warm apple, biscuit crumb, caramel, mixed berries, ice cream"],
+    e: "Warm apple, biscuit crumb, brioche in egg coating, cinnamon sugar, caramel, custard, ice cream and powdered sugar." },
+  { s: "breakfast", q: "What heat rating does the menu give the Chilli SCRAM?",
+    o: ["5 out of 10", "3 out of 10", "7 out of 10", "10 out of 10"],
+    e: "It is listed as 5/10 heat. Tell customers so they know what they are ordering." },
+  { s: "breakfast", q: "What gives the Chilli SCRAM its heat?",
+    o: ["Fermented chilli oil", "Fresh sliced chilli", "Sweet chilli sauce", "Pico de gallo"],
+    e: "Chilli SCRAM: thick tortilla, scrambled eggs, hollandaise, fermented chilli oil, herb oil, dukkah." },
+  { s: "breakfast", q: "The Mexican SMASH and Chilli SCRAM share a base. What is only on the Chilli SCRAM?",
+    o: ["Hollandaise and fermented chilli oil", "Smashed avocado and pico de gallo", "Herb oil and dukkah", "Sour cream and salsa"],
+    e: "Both have thick tortilla, scrambled eggs, herb oil and dukkah. The SMASH adds avocado and pico de gallo. The SCRAM adds hollandaise and fermented chilli oil." },
+  { s: "breakfast", q: "What comes on Bacon & Eggs?",
+    o: ["2 eggs (your choice), 2 bacon rashers, sourdough toast",
+        "2 eggs (your choice), 2 bacon rashers, sourdough toast, hash brown",
+        "2 poached eggs, 3 bacon rashers, white toast",
+        "2 eggs (your choice), 2 bacon rashers, grilled tomato, sourdough toast"],
+    e: "Bacon & Eggs ($18.50): 2 eggs your choice, 2 bacon rashers and sourdough toast. Anything else is an added side." },
+  { s: "breakfast", q: "What sauce comes on the Brekkie Burger?",
+    o: ["BBQ sauce", "Hollandaise", "Tomato relish", "Burger sauce"],
+    e: "Brekkie Burger: burger bun, fried egg, bacon, hash brown, lettuce, cheese and BBQ sauce." },
+  { s: "breakfast", q: "Which of these is inside the Brekkie Burger as standard?",
+    o: ["Hash brown", "Sausage patty", "Beef patty", "Tomato"],
+    e: "The hash brown is standard. Sausage patty ($3) and beef patty ($6) are add-ons." },
+  { s: "breakfast", q: "What does the standard Eggs Benedict come with?",
+    o: ["2 poached eggs, sourdough toast, ham, hollandaise, herbed oil",
+        "2 poached eggs, English muffin, bacon, hollandaise",
+        "2 poached eggs, sourdough toast, smoked salmon, hollandaise, herbed oil",
+        "2 fried eggs, sourdough toast, ham, hollandaise"],
+    e: "Ham is the standard. Bacon and smoked salmon are paid upgrades." },
+  { s: "breakfast", q: "Which of these is NOT part of The BIG Breakfast?",
+    o: ["Baked beans", "Grilled tomato", "Mushrooms", "Breakfast sausage"],
+    e: "The BIG Breakfast: 2 eggs your choice, sourdough toast, bacon, grilled tomato, breakfast sausage, hash brown, mushrooms. Baked beans are a $5 side." },
+  { s: "breakfast", q: "On the Vegetarian big brekky, what replaces the sausage and bacon?",
+    o: ["Collard greens, smashed avo and roast pumpkin", "Baked beans, mushrooms and avocado", "Spinach, haloumi and hash brown", "Roast pumpkin and extra eggs"],
+    e: "Sausage and bacon are swapped for collard greens, smashed avo and roast pumpkin at no extra charge." },
+  { s: "breakfast", q: "On the Carnivore big brekky, what replaces the tomato and mushrooms?",
+    o: ["Pulled pork, beef patty and sausage patty", "Extra bacon, ham and breakfast sausage", "Pulled pork, extra bacon and chicken", "Beef patty, ham and smoked salmon"],
+    e: "Tomato and mushrooms are swapped for pulled pork, a beef patty and a sausage patty for an extra $7." },
+
+  // ---------- LUNCH ----------
+  { s: "lunch", q: "What fish is used in the Fish & Chips?",
+    o: ["Beer battered flathead", "Crumbed flake", "Beer battered blue grenadier", "Grilled salmon"],
+    e: "Beer battered flathead, served as 2 piece ($25) or 3 piece ($27.50)." },
+  { s: "lunch", q: "What comes with the Fish & Chips?",
+    o: ["Lemon wedge, tartare sauce, salad and chips", "Lemon wedge, aioli, slaw and chips", "Tartare sauce, mushy peas and chips", "Lemon wedge, tomato sauce and wedges"],
+    e: "Flathead with lemon wedge, tartare sauce, salad and chips." },
+  { s: "lunch", q: "How is the egg cooked on the Caesar Salad?",
+    o: ["Poached", "Hard boiled", "Fried", "There is no egg"],
+    e: "Caesar Salad: cos lettuce, croutons, shaved parmesan, bacon, poached egg and dressing." },
+  { s: "lunch", q: "A customer orders a Caesar Salad and expects chicken. What do you tell them?",
+    o: ["Chicken is not included, warm chicken can be added for $5", "Chicken is included as standard", "Chicken can be swapped in for the bacon at no charge", "We cannot add chicken to the Caesar"],
+    e: "The standard Caesar has bacon but no chicken. Warm chicken is +$5, smoked salmon is +$6.50." },
+  { s: "lunch", q: "Which of these is NOT in the Chicken & Bacon Ranch Salad?",
+    o: ["Croutons", "Beetroot", "Corn", "Slaw"],
+    e: "Southern style chicken pieces, bacon, beetroot, corn, grated cheese, slaw, cos lettuce and ranch dressing. Croutons are in the Caesar." },
+  { s: "lunch", q: "What sauce comes on the Lamb Gyro?",
+    o: ["Tzatziki", "Lemon & herb mayo", "Ranch", "Aioli"],
+    e: "Lamb Gyro: 2 medium thick style wraps, grilled marinated lamb, lettuce, salsa and tzatziki." },
+  { s: "lunch", q: "What sauce comes on the Chicken Gyro?",
+    o: ["Lemon & herb mayo", "Tzatziki", "Sweet chilli", "Burger sauce"],
+    e: "Chicken Gyro: 2 medium thick style wraps, chicken breast, lettuce, lemon & herb mayo." },
+  { s: "lunch", q: "How many wraps come in a gyro serve?",
+    o: ["2", "1", "3", "1 large cut in half"],
+    e: "Both gyros are served as 2 medium thick style wraps." },
+  { s: "lunch", q: "What tops the standard Chicken Parmy?",
+    o: ["Napoli sauce, ham and cheese", "Napoli sauce and cheese only", "BBQ sauce, bacon and cheese", "Napoli sauce, ham, cheese and pineapple"],
+    e: "Chicken breast in panko crumb, lightly fried, topped with Napoli sauce, ham and cheese. Served with chips and salad." },
+  { s: "lunch", q: "What is on the Hawaiian parmy?",
+    o: ["Napoli sauce, ham, cheese, pineapple", "BBQ sauce, bacon, cheese, pineapple", "Napoli sauce, cheese, pineapple, no ham", "Salsa, ham, cheese, pineapple"],
+    e: "Hawaiian is the standard topping plus pineapple." },
+  { s: "lunch", q: "What is on the Mexican parmy?",
+    o: ["Salsa, corn chips, cheese, sour cream, avocado", "Napoli sauce, jalapenos, cheese, sour cream", "Salsa, pulled pork, cheese, avocado", "Pico de gallo, cheese, fermented chilli oil"],
+    e: "Mexican: salsa, corn chips, cheese, sour cream and avocado. It is the only parmy without Napoli sauce or ham." },
+  { s: "lunch", q: "What sauce is on the Cheese & Bacon Burger?",
+    o: ["Burger sauce", "Mayo", "BBQ sauce", "Tomato relish"],
+    e: "Angus beef patty, bacon, American cheese, burger sauce, lettuce, burger bun, with chips." },
+  { s: "lunch", q: "Which of these is NOT on the ANGUS Beef Burger with the LOT?",
+    o: ["Pineapple", "Beetroot", "Onion rings", "Egg"],
+    e: "With the LOT: Angus beef patty, egg, bacon, cheese, onion rings, mayo, beetroot, tomato, lettuce, burger bun, with chips. No pineapple." },
+  { s: "lunch", q: "What is on the Southern Fried Chicken Burger?",
+    o: ["Free range chicken breast, American cheese, mayo, slaw", "Chicken breast, bacon, BBQ sauce, pineapple", "Chicken breast, lettuce, tomato, ranch", "Chicken breast, American cheese, burger sauce, lettuce"],
+    e: "Free range chicken breast, American cheese, mayo and slaw on a burger bun, with chips." },
+  { s: "lunch", q: "What is in the PATTY Melt?",
+    o: ["Smashed Angus beef patty, American cheese, onion jam, thick cut bread", "Angus beef patty, bacon, American cheese, burger bun", "Smashed Angus beef patty, cheese, pickles, burger sauce, bun", "Sausage patty, American cheese, onion rings, thick cut bread"],
+    e: "A patty melt is a toasted sandwich, not a burger: smashed Angus patty, American cheese and onion jam between thick cut bread." },
+  { s: "lunch", q: "According to the menu, which of these does NOT list chips?",
+    o: ["PATTY Melt", "Cheese & Bacon Burger", "Southern Fried Chicken Burger", "ANGUS Beef Burger with the LOT"],
+    e: "The three burgers list chips. The PATTY Melt and the BBQ Fried Chicken MEGA Toastie do not." },
+  { s: "lunch", q: "What is in the BBQ Fried Chicken MEGA Toastie?",
+    o: ["Free range chicken breast, American cheese, BBQ sauce, pineapple, bacon", "Chicken breast, cheese, BBQ sauce, slaw", "Chicken breast, American cheese, mayo, bacon, onion jam", "Pulled pork, American cheese, BBQ sauce, pineapple"],
+    e: "Free range chicken breast, American cheese, BBQ sauce, pineapple and bacon in thick cut bread." },
+  { s: "lunch", q: "How many spring rolls come in a serve, and with what sauce?",
+    o: ["3, with sweet chilli", "4, with sweet chilli", "3, with soy sauce", "6, with sweet chilli"],
+    e: "HAKKA spring rolls (3) with sweet chilli. Vegetarian and dairy free." },
+  { s: "lunch", q: "A customer orders Nachos and asks what meat is on them. What is correct?",
+    o: ["None as standard, pulled pork can be added for $6", "Beef mince as standard, at no extra cost", "Pulled pork as standard, included in the price", "Chicken as standard, pulled pork is $6 extra"],
+    e: "Nachos are vegetarian: corn chips, tomato salsa, grilled cheese, sour cream and avocado. Pulled pork is +$6." },
+  { s: "lunch", q: "What comes with the Wedges?",
+    o: ["Sour cream and sweet chilli sauce", "Tomato sauce", "Aioli and sweet chilli sauce", "Sour cream and gravy"],
+    e: "Battered wedges with sour cream and sweet chilli sauce." },
+  { s: "lunch", q: "What comes on the Sweet Pancake?",
+    o: ["2 pancakes, butter, maple syrup, vanilla ice cream, powdered sugar", "2 pancakes, caramel, custard, ice cream", "3 pancakes, maple syrup, whipped cream, berries", "2 pancakes, bacon, maple syrup"],
+    e: "Sweet pancake (2), butter, maple syrup, vanilla ice cream and powdered sugar." },
+  { s: "lunch", q: "Which breads can a customer choose for Toast?",
+    o: ["Sourdough, white, wholemeal or gluten free", "Sourdough, white, rye or gluten free", "White, wholemeal or multigrain", "Sourdough, Turkish or gluten free"],
+    e: "Toast ($7): sourdough, white, wholemeal or gluten free, buttered, with spreads available." },
+
+  // ---------- INGREDIENTS ----------
+  { s: "ingredients", q: "What is pico de gallo?",
+    o: ["A fresh Mexican salsa of chopped tomato, onion, coriander, chilli and lime", "A smoky Mexican paste of dried chillies, garlic, vinegar and spices", "A Spanish cured pork sausage flavoured with garlic and smoked paprika", "A cooked Italian sauce of tomato, capsicum, onion and fresh basil"],
+    e: "Pico de gallo is an uncooked Mexican salsa. It is chunky and fresh, not a smooth cooked sauce. It is on the Mexican SMASH." },
+  { s: "ingredients", q: "What is dukkah, and where is it from?",
+    o: ["An Egyptian blend of crushed nuts, seeds and spices", "A Moroccan paste of chilli, garlic and preserved lemon", "An Indian yoghurt dip with cumin and fresh coriander", "A Greek mix of dried herbs, sea salt and lemon zest"],
+    e: "Dukkah is Egyptian. Because it is nuts and seeds, both dishes that carry it (Mexican SMASH, Chilli SCRAM) are a nut and seed allergy risk." },
+  { s: "ingredients", q: "What is hollandaise made from?",
+    o: ["Egg yolks, butter and lemon", "Cream, cheese and mustard", "Mayonnaise and garlic", "Milk, flour and butter"],
+    e: "Hollandaise is a classic French sauce of egg yolk and butter with lemon. It contains egg and dairy." },
+  { s: "ingredients", q: "What are collard greens?",
+    o: ["A leafy green from the cabbage family, popular in the American South", "A type of edible seaweed, popular in Japanese and Korean cooking", "A soft herb similar to parsley, popular in French cooking", "A flat green bean variety, popular in Italian home cooking"],
+    e: "Collard greens are a brassica like kale and cabbage. They are a $5 side and part of the Vegetarian big brekky." },
+  { s: "ingredients", q: "What is tzatziki, and where is it from?",
+    o: ["A Greek sauce of yoghurt, cucumber and garlic", "A Turkish chilli and tomato dip", "A Lebanese chickpea dip", "An Italian basil and pine nut sauce"],
+    e: "Tzatziki is Greek and yoghurt based, so it contains dairy. It is on the Lamb Gyro." },
+  { s: "ingredients", q: "Where does the gyro come from?",
+    o: ["Greece", "Mexico", "Turkey", "Lebanon"],
+    e: "A gyro is a Greek dish of meat served in a flatbread wrap with salad and sauce." },
+  { s: "ingredients", q: "What is Napoli sauce?",
+    o: ["An Italian style tomato sauce", "A creamy garlic sauce", "A spicy capsicum relish", "A cheese sauce"],
+    e: "Napoli is a simple tomato based sauce, named for Naples in Italy. It goes on the standard and Hawaiian parmy." },
+  { s: "ingredients", q: "What is panko?",
+    o: ["A light, flaky Japanese style breadcrumb", "A Korean chilli powder", "A gluten free rice crumb", "A type of batter made with beer"],
+    e: "Panko is a Japanese style breadcrumb made from wheat bread, so the parmy crumb contains gluten." },
+  { s: "ingredients", q: "What makes brioche different from normal bread?",
+    o: ["It is a French bread enriched with butter and eggs, soft and slightly sweet", "It is an Italian bread made with olive oil, flat with a chewy crust", "It is a German bread made from rye flour, dense, dark and sour", "It is a gluten free bread made from rice flour, light and crumbly"],
+    e: "Brioche is French and enriched with butter and egg. It contains gluten, dairy and egg." },
+  { s: "ingredients", q: "Cos lettuce is also known as what?",
+    o: ["Romaine", "Iceberg", "Rocket", "Butter lettuce"],
+    e: "Cos and romaine are the same crisp, long leaf lettuce. It is in the Caesar and the Chicken & Bacon Ranch Salad." },
+  { s: "ingredients", q: "What is tartare sauce?",
+    o: ["A mayonnaise based sauce with chopped pickles and herbs", "A tomato based sauce with horseradish and lemon juice", "A warm butter sauce with lemon, capers and parsley", "A yoghurt based sauce with dill and grated cucumber"],
+    e: "Tartare is mayonnaise based, so it contains egg. It comes with the Fish & Chips." },
+  { s: "ingredients", q: "What is aioli?",
+    o: ["Garlic mayonnaise", "Chilli mayonnaise", "A herb oil", "A mustard dressing"],
+    e: "Aioli is a garlic mayonnaise style sauce from the Mediterranean. It is a $3 condiment." },
+  { s: "ingredients", q: "A vegetarian asks for Worcestershire sauce. What should you know?",
+    o: ["It is an English sauce that traditionally contains anchovies", "It is a Japanese style soy sauce that is always vegan", "It is an Italian sauce made from mushrooms and vinegar", "It is an American sauce that always contains beef stock"],
+    e: "Worcestershire is a fermented English sauce and the traditional recipe includes anchovies. Check the bottle label before telling a vegetarian it is fine." },
+  { s: "ingredients", q: "What does Angus mean on the burger menu?",
+    o: ["A breed of beef cattle that originated in Scotland", "A way of cooking the patty over an open flame", "A cut of beef taken from the rib of the animal", "A style of burger bun that is baked with milk"],
+    e: "Angus is a cattle breed from Scotland known for well marbled beef." },
+  { s: "ingredients", q: "What is onion jam?",
+    o: ["Onions cooked slowly until sweet and sticky", "Raw red onion pickled in vinegar and sugar", "Onion rings that are crumbed and deep fried", "Onion and garlic blended into mayonnaise"],
+    e: "Onion jam is slow cooked caramelised onion. It is in the PATTY Melt." },
+  { s: "ingredients", q: "A customer says sourdough is fine for a gluten free diet. Is that right?",
+    o: ["No, sourdough is made from wheat flour and contains gluten", "Yes, the long fermentation removes all of the gluten", "Yes, sourdough is made from rice flour instead of wheat", "Only if it is well toasted, which breaks the gluten down"],
+    e: "Sourdough is raised with a natural starter instead of commercial yeast, but it is still wheat bread. Offer the gluten free option." },
+  { s: "ingredients", q: "Where does maple syrup come from?",
+    o: ["The sap of maple trees, most famously from Canada", "Sugar cane that is grown and refined in Queensland", "Honey that is blended with caramel and vanilla", "Corn syrup with maple flavouring, from the USA"],
+    e: "Maple syrup is boiled down maple tree sap. Canada is the biggest producer, which is why it is on the Canadian Breakfast." },
+  { s: "ingredients", q: "What is American cheese?",
+    o: ["A mild processed cheese slice that melts smoothly", "A sharp aged cheddar that crumbles when it is cut", "A soft blue cheese with a strong, salty flavour", "A dairy free cheese that is made from cashews"],
+    e: "American cheese is the classic melting burger slice. It is on the burgers, PATTY Melt and MEGA Toastie." },
+  { s: "ingredients", q: "The menu marks the flathead (I) and the smoked salmon (A). What does that mean?",
+    o: ["The flathead is imported and the smoked salmon is Australian", "The flathead is Australian and the smoked salmon is imported", "Both are Australian", "(I) means fresh and (A) means frozen"],
+    e: "Seafood country of origin: (A) Australian, (I) Imported, (M) Mixed origin." },
+
+  // ---------- ADD-ONS & PRICING ----------
+  { s: "addons", q: "Which group of sides are $5 each?",
+    o: ["Mushroom, tomato, collard greens, baked beans, roast pumpkin", "Bacon, sausage, pulled pork, avocado, hash browns", "Mushroom, tomato, avocado, hash browns", "Baked beans, bacon, roast pumpkin, sausage"],
+    e: "$5 sides: mushroom, tomato, collard greens, baked beans, roast pumpkin." },
+  { s: "addons", q: "How much is a side of bacon, sausage, pulled pork, avocado or hash browns?",
+    o: ["$6 each", "$5 each", "$7 each", "$4 each"],
+    e: "$6 sides: bacon, sausage, pulled pork, avocado, hash browns." },
+  { s: "addons", q: "How much is a side of smoked salmon?",
+    o: ["$7", "$6", "$6.50", "$5"],
+    e: "Smoked salmon as a side is $7. Note it is $6 as an Eggs Benedict swap and $6.50 added to a Caesar." },
+  { s: "addons", q: "Which of these condiments is on the house?",
+    o: ["BBQ sauce", "Aioli", "Hollandaise", "Tomato relish"],
+    e: "Free: tomato, BBQ, sweet chilli, white vinegar, Worcestershire. Everything else is $3." },
+  { s: "addons", q: "A customer asks for a side of hollandaise. What do you charge?",
+    o: ["$3", "Nothing, sauces are free", "$5", "$1"],
+    e: "$3 condiments: hollandaise, sour cream, tomato relish, aioli, ranch, maple, gravy, extra butter." },
+  { s: "addons", q: "Tomato sauce and tomato relish. Which is charged?",
+    o: ["Tomato relish is $3, tomato sauce is free", "Both are free", "Both are $3", "Tomato sauce is $3, relish is free"],
+    e: "Easy one to get wrong at the till. Tomato sauce is on the house, tomato relish is a $3 condiment." },
+  { s: "addons", q: "What does it cost to swap sourdough toast for a croissant?",
+    o: ["$5", "$3", "$6", "No charge"],
+    e: "Swap sourdough toast: croissant $5, gluten free option (2 slices) $3." },
+  { s: "addons", q: "What does it cost to swap sourdough toast for the gluten free option?",
+    o: ["$3", "$5", "No charge", "$2"],
+    e: "Gluten free toast (2) is a $3 swap." },
+  { s: "addons", q: "Eggs Benedict upgrade. What are the swap prices for the ham?",
+    o: ["Bacon $3, smoked salmon $6", "Bacon $6, smoked salmon $7", "Bacon free, smoked salmon $6", "Bacon $3, smoked salmon $7"],
+    e: "Swap the ham for bacon (+$3) or smoked salmon (+$6)." },
+  { s: "addons", q: "Outside the breakfast special, what is the total for Eggs Benedict with smoked salmon instead of ham?",
+    o: ["$28", "$29", "$22", "$25"],
+    e: "$22 + $6 smoked salmon swap = $28." },
+  { s: "addons", q: "What are the Brekkie Burger add-ons?",
+    o: ["Sausage patty $3, beef patty $6", "Sausage patty $6, beef patty $6", "Extra bacon $3, beef patty $5", "Sausage patty $3, pulled pork $6"],
+    e: "Add a sausage patty for $3 or a beef patty for $6." },
+  { s: "addons", q: "Which add-on is suggested for both the Chilli SCRAM and the Nachos?",
+    o: ["Pulled pork for $6", "Avocado for $6", "Warm chicken for $5", "Bacon for $6"],
+    e: "Pulled pork +$6 is the upsell on both. Offer it every time." },
+  { s: "addons", q: "What can be added to the Caesar Salad, and for how much?",
+    o: ["Warm chicken $5 or smoked salmon $6.50", "Warm chicken $6 or smoked salmon $7", "Warm chicken $5 or pulled pork $6", "Grilled chicken free, smoked salmon $6"],
+    e: "Add warm chicken $5 or smoked salmon $6.50." },
+  { s: "addons", q: "How much extra is the Vegetarian big brekky?",
+    o: ["No extra charge", "$3", "$5", "$7"],
+    e: "It is the one swap built into the menu at no extra charge, $26.50." },
+  { s: "addons", q: "Outside the breakfast special, what is the total for a Carnivore big brekky?",
+    o: ["$33.50", "$26.50", "$31.50", "$32"],
+    e: "$26.50 + $7 = $33.50." },
+  { s: "addons", q: "A customer wants to swap the mushrooms on their BIG Breakfast for avocado. What do you charge for the swap?",
+    o: ["The avocado is charged as a $6 side, there are no free swaps", "Nothing, like for like swaps are free of charge", "$1, the difference between the two side prices", "Nothing, every meal includes one free swap"],
+    e: "There are no free swaps. Anything swapped in is an add-on at its listed price, so the avocado is a $6 side even though the mushrooms come off." },
+  { s: "addons", q: "What is the Breakfast Special?",
+    o: ["All breakfast items $16 before 11am", "All breakfast items $16 all day on weekdays", "Bacon & Eggs $16 before 11am", "10% off breakfast before 10am"],
+    e: "All breakfast items are $16 before 11am. Upgrades and add-ons are charged on top. Not available on public holidays." },
+  { s: "addons", q: "It is 11:20am on a Tuesday and a customer orders Bacon & Eggs. What is the price?",
+    o: ["$18.50", "$16", "$15.50", "$20.35"],
+    e: "The $16 special ends at 11am, so it is the full menu price of $18.50." },
+  { s: "addons", q: "What is the Chicken Parmy lunch special?",
+    o: ["$22, 11am to 2pm, Monday to Friday", "$22, all day, every day", "$20, 11am to 2pm, Monday to Friday", "$22, 12pm to 3pm, every day"],
+    e: "Any parmy (standard, Hawaiian or Mexican) is $22, 11am to 2pm, Monday to Friday. Not available on public holidays." },
+  { s: "addons", q: "A customer orders a Chicken Parmy at 12:30pm on a Saturday. What is the price?",
+    o: ["$26.50", "$22", "$24", "$29.15"],
+    e: "The lunch special is Monday to Friday only, so Saturday is the full $26.50." },
+  { s: "addons", q: "What changes on a public holiday?",
+    o: ["A 10% surcharge applies and the breakfast and lunch specials do not run", "A 15% surcharge applies and the breakfast and lunch specials still run", "No surcharge applies but the breakfast and lunch specials do not run", "A 10% surcharge applies and only the lunch special does not run"],
+    e: "10% surcharge on public holidays, and no breakfast or lunch specials." },
+  { s: "addons", q: "On a public holiday, what does a 2 piece Fish & Chips ($25) cost?",
+    o: ["$27.50", "$25", "$28.75", "$26.25"],
+    e: "$25 plus 10% ($2.50) = $27.50." },
+  { s: "addons", q: "A table orders mains plus a toastie from the display cabinet. What should you let them know?",
+    o: ["Cabinet items may come out at a different time to the dine-in meals", "Cabinet items always come out after all of the dine-in meals", "Cabinet items are takeaway only and cannot be eaten at a table", "Cabinet items carry a small surcharge when they are eaten in"],
+    e: "The menu warns that cabinet items may arrive at different times from dine-in selections. Say it at the time of ordering." },
+  { s: "addons", q: "What are the Fish & Chips prices?",
+    o: ["2 piece $25, 3 piece $27.50", "2 piece $22, 3 piece $25", "2 piece $25, 3 piece $30", "1 piece $20, 2 piece $25"],
+    e: "2 piece $25, 3 piece $27.50. The third piece is only $2.50 more, an easy upsell." },
+
+  { s: "addons", q: "It is 12pm on a Wednesday. Which parmy options are $22 on the lunch special?",
+    o: ["All three: standard, Hawaiian and Mexican", "The standard Chicken Parmy only", "Standard and Hawaiian, but not Mexican", "All three, but Hawaiian and Mexican are $2 extra"],
+    e: "The $22 lunch special covers every parmy option, 11am to 2pm, Monday to Friday." },
+  { s: "addons", q: "At 9am on a weekday a customer orders the Carnivore big brekky. What is the total?",
+    o: ["$23", "$16", "$33.50", "$26.50"],
+    e: "The breakfast special makes the BIG Breakfast $16. Upgrades go on top, so $16 + $7 = $23." },
+  { s: "addons", q: "At 10am a customer orders Eggs Benedict with smoked salmon instead of ham. What is the total?",
+    o: ["$22", "$16", "$28", "$23"],
+    e: "$16 breakfast special + $6 smoked salmon swap = $22. Upgrades are always on top of the special price." },
+  { s: "addons", q: "At 8:30am a customer orders a Chilli SCRAM with pulled pork. What is the total?",
+    o: ["$22", "$16", "$25.50", "$19.50"],
+    e: "$16 breakfast special + $6 pulled pork = $22." },
+  { s: "addons", q: "A customer on the $16 breakfast special adds a side of bacon. How is it charged?",
+    o: ["$6 on top of the $16", "It is included in the $16", "$3, sides are half price before 11am", "$5 on top of the $16"],
+    e: "Add-ons are priced as listed whether or not the special is running. Bacon is a $6 side." },
+  { s: "addons", q: "A customer asks to swap the bacon on their Bacon & Eggs for a hash brown, and expects no charge because bacon costs the same. What is correct?",
+    o: ["The hash brown is charged at $6, there are no free swaps", "No charge, both are $6 sides", "$3, half the side price for a swap", "No charge the first time, then $6"],
+    e: "No free swaps, even when the two items cost the same. The item added is charged at its listed price." },
+
+  // ---------- DIETARY ----------
+  { s: "dietary", q: "What does (GFO) mean on the menu?",
+    o: ["A gluten free option is available on request", "The dish is gluten free exactly as it is served", "The dish is only ever made gluten free", "Gluten free is available on weekends only"],
+    e: "(GFO) means the dish can be made gluten free on request, for example with gluten free toast. It is not gluten free as listed." },
+  { s: "dietary", q: "What does (DFO) mean?",
+    o: ["A dairy free option is available on request", "The dish is dairy free exactly as it is served", "The dish can be deep fried on request", "The dish is only ever made dairy free"],
+    e: "(DFO) means it can be made dairy free on request." },
+  { s: "dietary", q: "Which two breakfast dishes carry a NUTS warning?",
+    o: ["Mexican SMASH and Chilli SCRAM", "Apple Crumble French Toast and Canadian Breakfast", "Eggs Benedict and Mexican SMASH", "Chilli SCRAM and The BIG Breakfast"],
+    e: "Both are finished with dukkah, a nut and seed blend." },
+  { s: "dietary", q: "Which ingredient is the reason for the NUTS warning on the tortilla dishes?",
+    o: ["Dukkah", "Herb oil", "Pico de gallo", "Fermented chilli oil"],
+    e: "Dukkah is made from crushed nuts, seeds and spices." },
+  { s: "dietary", q: "Which dishes are marked (NO ALT)?",
+    o: ["Apple Crumble French Toast, Lamb Gyro and Chicken Gyro", "Eggs Benedict, Bacon & Eggs and The BIG Breakfast", "Chicken Parmy, Fish & Chips and Caesar Salad", "Nachos, Spring Rolls and the Sweet Pancake"],
+    e: "(NO ALT) means no alterations. These three are served exactly as listed, with no changes or dietary alternatives." },
+  { s: "dietary", q: "A coeliac customer wants Eggs Benedict. What can you offer?",
+    o: ["Gluten free toast as a $3 swap, and you tell the kitchen about the allergy", "Nothing, it cannot be made gluten free so suggest another dish", "The dish as listed, it is already gluten free with no changes", "Gluten free toast as a free swap, because it is for an allergy"],
+    e: "Eggs Benedict is (GFO). The gluten free toast swap is $3. The kitchen uses shared equipment, so always pass on the allergy." },
+  { s: "dietary", q: "A dairy free customer asks about Eggs Benedict. What is the issue?",
+    o: ["Hollandaise is made with butter and the dish is not marked (DFO)", "There is no issue, the dish is marked (DFO) on the menu", "The sourdough toast is made with milk and cannot be swapped", "The ham is cured with dairy and the dish is not marked (DFO)"],
+    e: "Eggs Benedict is (GFO) only. Hollandaise is a butter sauce." },
+  { s: "dietary", q: "Which Lighter Options are marked both vegetarian and dairy free?",
+    o: ["Spring Rolls and Chips", "Nachos and Wedges", "Sweet Pancake and Fruit Toast", "Nuggets and Chips"],
+    e: "Spring Rolls (V) (DF) and Chips (V) (DF). Wedges are (V) (DFO) because of the sour cream." },
+  { s: "dietary", q: "How are the Nachos marked on the menu?",
+    o: ["Vegetarian and gluten free", "Vegetarian only", "Gluten free and dairy free", "Vegan"],
+    e: "Nachos are marked (V) (GF). They are not dairy free because of the cheese and sour cream." },
+  { s: "dietary", q: "Which drink is marked vegan on the menu?",
+    o: ["Mont Blanc", "Salted Honey Iced Latte", "Soft-serve Affogato", "Biscoff Deluxe"],
+    e: "The Mont Blanc uses soy and plant cream and is marked (VEGAN)." },
+  { s: "dietary", q: "A customer with a tree nut allergy orders a Coconut Cold Brew Latte. What should you flag?",
+    o: ["It contains almond milk syrup", "Nothing, coconut is the only concern", "It contains hazelnut syrup", "It contains dukkah"],
+    e: "Coconut Cold Brew Latte: 24 hour cold brew, coconut cream and almond milk syrup. Almond is a tree nut." },
+  { s: "dietary", q: "A customer tells you they have a severe allergy. What does the menu's allergen notice say?",
+    o: ["Shared equipment means traces of allergens may be present, so they should speak with staff", "Every dish can be guaranteed allergen free, as long as they ask when they order", "Allergen free meals are cooked on separate equipment in a dedicated kitchen area", "Only dishes marked with a code contain allergens, everything else is safe to order"],
+    e: "Shared equipment means traces of meat, seafood, dairy, gluten, nuts and other allergens may be present. Never guarantee a dish is allergen free." },
+  { s: "dietary", q: "Is the Sweet Pancake marked as having a gluten free option?",
+    o: ["No, it is marked vegetarian only", "Yes, it is (GFO)", "Yes, it is gluten free as served", "Yes, for a $3 swap"],
+    e: "Sweet Pancake is (V) only. There is no gluten free or dairy free option listed." },
+
+  { s: "dietary", q: "What does (NO ALT) mean on the menu?",
+    o: ["No alterations, the dish is served as listed", "No alcohol is used in the dish", "No allergens are present in the dish", "Not available at all times of day"],
+    e: "(NO ALT) means the dish cannot be changed and has no dietary alternative. Let the customer know before they order." },
+
+  // ---------- DRINKS ----------
+  { s: "drinks", q: "What are the prices for a milkshake, a thick shake and an Ultrashake?",
+    o: ["$7.50, $8.50 and $10", "$7, $8 and $10", "$7.50, $9 and $12", "$6.50, $7.50 and $9"],
+    e: "Milkshakes $7.50, thick shakes $8.50, Ultrashakes $10." },
+  { s: "drinks", q: "What are the coffee, hot chocolate and chai sizes and prices?",
+    o: ["Small $5.30, medium $5.80, large $6.50", "Small $5, medium $5.50, large $6", "Small $4.80, medium $5.30, large $5.80", "Small $5.30, medium $6, large $7"],
+    e: "Small $5.30, medium $5.80, large $6.50." },
+  { s: "drinks", q: "What is in the Turkish Delight Ultrashake?",
+    o: ["Rosewater syrup, grated chocolate, raspberry coulis, whipped cream and Turkish delight", "Strawberry syrup, chocolate, whipped cream and Turkish delight", "Rosewater syrup, white chocolate, raspberry lollies and whipped cream", "Rosewater syrup, honeycomb, chocolate and whipped cream"],
+    e: "Rosewater gives Turkish delight its floral flavour. Coulis is a smooth fruit sauce." },
+  { s: "drinks", q: "What is Biscoff?",
+    o: ["A Belgian caramelised spiced biscuit", "An Italian hazelnut chocolate", "A British shortbread", "An American peanut butter cookie"],
+    e: "Biscoff is the Lotus brand speculoos biscuit from Belgium. It is a wheat biscuit, so the Biscoff Deluxe contains gluten." },
+  { s: "drinks", q: "What goes into the Cookies & Cream Ultrashake?",
+    o: ["Chocolate, crushed Oreos, whipped cream and an Oreo cookie", "Vanilla, crushed Biscoff, whipped cream and a cookie", "Chocolate, honeycomb, whipped cream and an Oreo cookie", "White chocolate, crushed Oreos and raspberry coulis"],
+    e: "Chocolate, crushed Oreos, whipped cream and an Oreo cookie on top." },
+  { s: "drinks", q: "Which Ultrashake is made with spearmint syrup?",
+    o: ["Peppermint Choc Chip", "Honeycomb Crunch", "Turkish Delight", "Cookies & Cream"],
+    e: "Peppermint Choc Chip: spearmint syrup, grated chocolate, whipped cream and peppermint candy." },
+  { s: "drinks", q: "What is in the Mont Blanc?",
+    o: ["Espresso, brown sugar syrup, layered soy and plant cream, orange zest, over ice", "Espresso, white chocolate, whipped cream, served hot", "Cold brew, coconut cream, almond milk syrup, over ice", "Espresso, milk, honey and sea salt, over ice"],
+    e: "Mont Blanc ($8.50) is an iced espresso drink topped with cream and orange zest. Ours is vegan." },
+  { s: "drinks", q: "What is in the Salted Honey Iced Latte?",
+    o: ["Espresso, milk, honey and a touch of sea salt, over ice", "Espresso, soy milk, salted caramel syrup, over ice", "Cold brew, honey and cream, over ice", "Espresso, milk, honeycomb and chocolate, over ice"],
+    e: "Espresso, milk, honey and a touch of sea salt, served over ice. $7." },
+  { s: "drinks", q: "How long is the cold brew coffee brewed for?",
+    o: ["24 hours", "12 hours", "4 hours", "48 hours"],
+    e: "Cold brew is coffee steeped in cold water instead of hot. Ours is a 24 hour brew, which gives a smooth, less bitter coffee." },
+  { s: "drinks", q: "What is an affogato, and how do we serve it?",
+    o: ["Italian: a shot of espresso poured over soft-serve ice cream", "French: an iced coffee topped with thick whipped cream", "American: a vanilla milkshake blended with a double shot", "Spanish: an espresso served over sweet condensed milk"],
+    e: "Affogato is Italian for drowned. Ours is a shot of espresso over soft-serve, $7.50." },
+  { s: "drinks", q: "Which teas are on the Tea Drop list?",
+    o: ["English breakfast, earl grey, gunpowder green, ginger & lemongrass, peppermint", "English breakfast, earl grey, chamomile, jasmine green, peppermint", "English breakfast, Irish breakfast, green, lemon, peppermint", "English breakfast, earl grey, gunpowder green, chai, chamomile"],
+    e: "Tea Drop tea, $5, pot for one: English breakfast, earl grey, gunpowder green, ginger & lemongrass, peppermint." },
+  { s: "drinks", q: "What is gunpowder green tea?",
+    o: ["A Chinese green tea with leaves rolled into small pellets", "A smoked black tea grown in the north of India", "A Japanese green tea ground into a fine powder", "A green tea blended with dried chilli and ginger"],
+    e: "The name comes from the tightly rolled leaves, which look like gunpowder pellets. It is not smoky or spicy." },
+  { s: "drinks", q: "Where does chai come from?",
+    o: ["India, where it is black tea brewed with spices", "China, where it is green tea with jasmine", "Morocco, where it is green tea with mint", "England, where it is black tea with bergamot"],
+    e: "Chai is Indian spiced tea, usually black tea with spices like cinnamon, cardamom, ginger and clove." },
+  { s: "drinks", q: "What is in the Green Machine smoothie?",
+    o: ["Spinach, cucumber, banana", "Spinach, kale, apple, vanilla yoghurt", "Spinach, mango, banana, vanilla yoghurt", "Cucumber, apple, mint"],
+    e: "Green Machine ($8.50): spinach, cucumber and banana. It is the only smoothie listed without vanilla yoghurt." },
+  { s: "drinks", q: "What is in the Mango Pash smoothie?",
+    o: ["Mango, passionfruit, banana, vanilla yoghurt", "Mango, pineapple, coconut cream", "Mango, passionfruit, orange juice", "Mango, strawberry, banana, vanilla yoghurt"],
+    e: "Mango Pash ($9): mango, passionfruit, banana and vanilla yoghurt." },
+  { s: "drinks", q: "What is in the Red Square Berry Blast?",
+    o: ["Strawberry, raspberry, blueberry, vanilla yoghurt", "Strawberry, banana, vanilla yoghurt", "Mixed berries, apple juice", "Strawberry, raspberry, blackberry, coconut cream"],
+    e: "Red Square Berry Blast ($9): strawberry, raspberry, blueberry and vanilla yoghurt." },
+  { s: "drinks", q: "Which juices are on the menu?",
+    o: ["Orange, apple, pineapple", "Orange, apple, tomato", "Orange, pineapple, cranberry", "Orange, apple, grapefruit"],
+    e: "Juice $5.50: orange, apple or pineapple." },
+  { s: "drinks", q: "Which cola brand do we stock?",
+    o: ["Pepsi and Pepsi Max", "Coke and Coke No Sugar", "Coke and Pepsi", "Schweppes Cola"],
+    e: "Classic Soda Range $5: Pepsi, Pepsi Max, Solo, ginger beer, lemonade, orange & mango, lemon lime & bitters, blood orange, mineral water. If someone asks for a Coke, offer Pepsi." }
+];
+
+</script>
+<script>
+(function(){
+  var PASS = 80, FULL_COUNT = 30, KEY = "rsq-glenorchy-menu-attempts";
+  // Paste the Apps Script web app URL here to send every attempt to the staff log sheet.
+  var LOG_URL = "";
+  var VENUE = "Glenorchy", TEST = "Menu", PENDING = "rsq-training-pending";
+  var $ = function(id){ return document.getElementById(id); };
+  var state = null;
+  $("passLabel").textContent = PASS;
+
+  function shuffle(a){ a = a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function secName(id){ if(id==="full") return "Full menu test"; for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i].id===id) return SECTIONS[i].name; return id; }
+  function loadHist(){ try{ return JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ return []; } }
+  function saveHist(h){ try{ localStorage.setItem(KEY, JSON.stringify(h)); }catch(e){} }
+  function loadPending(){ try{ return JSON.parse(localStorage.getItem(PENDING)||"[]"); }catch(e){ return []; } }
+  function savePending(p){ try{ localStorage.setItem(PENDING, JSON.stringify(p)); }catch(e){} }
+  // Sends anything waiting, oldest first. Stops at the first failure and keeps the rest for next time.
+  function flush(){
+    if(!LOG_URL) return Promise.resolve("local");
+    var p = loadPending();
+    if(!p.length) return Promise.resolve("sent");
+    return fetch(LOG_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(p[0])})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(!j || !j.ok) throw new Error((j && j.error) || "Log rejected"); savePending(loadPending().slice(1)); return flush(); });
+  }
+  function show(id){ ["start","quiz","result"].forEach(function(s){ $(s).hidden = s!==id; }); window.scrollTo(0,0); }
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+  function renderStart(){
+    var list = $("secList"); list.innerHTML = "";
+    function add(id, name, blurb, n, full){
+      var b = el("button","sec"+(full?" full":"")); b.type="button";
+      var l = el("span"); l.appendChild(el("b",null,name)); l.appendChild(el("small",null,blurb));
+      b.appendChild(l); b.appendChild(el("span","n", n+" questions"));
+      b.addEventListener("click", function(){ begin(id); });
+      list.appendChild(b);
+    }
+    SECTIONS.forEach(function(s){
+      var n = QUESTIONS.filter(function(q){ return q.s===s.id; }).length;
+      add(s.id, s.name, s.blurb, n, false);
+    });
+    add("full","Full menu test","A random mix from every section", Math.min(FULL_COUNT, QUESTIONS.length), true);
+    renderHist();
+  }
+
+  function renderHist(){
+    var h = loadHist(); $("histBox").hidden = !h.length; if(!h.length) return;
+    var t = $("hist"); t.innerHTML = "";
+    var hr = el("tr"); ["When","Name","Section","Score","Result"].forEach(function(x){ hr.appendChild(el("th",null,x)); }); t.appendChild(hr);
+    h.slice().reverse().slice(0,20).forEach(function(a){
+      var r = el("tr");
+      [new Date(a.t).toLocaleString("en-AU",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}), a.name, secName(a.sec), a.right+"/"+a.total+" ("+a.pct+"%)", a.pct>=PASS?"Pass":"Re-test"]
+        .forEach(function(x){ r.appendChild(el("td",null,x)); });
+      t.appendChild(r);
+    });
+  }
+
+  function begin(sec){
+    var name = $("staffName").value.trim();
+    if(!name){ $("staffName").focus(); $("staffName").placeholder = "Enter your name first"; return; }
+    var pool = sec==="full" ? shuffle(QUESTIONS).slice(0, FULL_COUNT) : shuffle(QUESTIONS.filter(function(q){ return q.s===sec; }));
+    state = { name:name, sec:sec, qs:pool, i:0, right:0, missed:[] };
+    show("quiz"); renderQ();
+  }
+
+  function renderQ(){
+    var q = state.qs[state.i];
+    $("qSec").textContent = secName(q.s);
+    $("qNum").textContent = (state.i+1)+" of "+state.qs.length;
+    $("qBar").style.width = (state.i/state.qs.length*100)+"%";
+    $("qText").textContent = q.q;
+    $("fb").hidden = true; $("next").hidden = true;
+    var box = $("opts"); box.innerHTML = "";
+    var correct = q.o[0];
+    shuffle(q.o).forEach(function(text, idx){
+      var b = el("button","opt"); b.type="button";
+      b.appendChild(el("span","k","ABCD"[idx])); b.appendChild(el("span",null,text));
+      b.addEventListener("click", function(){ answer(b, text, correct, q); });
+      box.appendChild(b);
+    });
+  }
+
+  function answer(btn, text, correct, q){
+    var ok = text===correct;
+    Array.prototype.forEach.call($("opts").children, function(b){
+      b.disabled = true;
+      if(b.lastChild.textContent===correct) b.classList.add("right");
+    });
+    if(ok) state.right++; else { btn.classList.add("wrong"); state.missed.push({q:q.q, y:text, c:correct, e:q.e}); }
+    var fb = $("fb"); fb.className = "fb "+(ok?"ok":"no"); fb.innerHTML = "";
+    fb.appendChild(el("b",null, ok?"Correct":"Not quite")); fb.appendChild(el("span",null,q.e)); fb.hidden = false;
+    var n = $("next"); n.textContent = state.i+1<state.qs.length ? "Next question" : "See my result"; n.hidden = false; n.focus();
+  }
+
+  function finish(){
+    var total = state.qs.length, pct = Math.round(state.right/total*100), pass = pct>=PASS;
+    var h = loadHist(); h.push({t:Date.now(), name:state.name, sec:state.sec, right:state.right, total:total, pct:pct}); saveHist(h);
+    var rec = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,8), t:Date.now(), name:state.name, venue:VENUE, test:TEST,
+      section:secName(state.sec), right:state.right, total:total, pct:pct, pass:PASS, missed:state.missed.map(function(m){ return m.q; })};
+    var sv = $("rSave");
+    if(LOG_URL){
+      var p = loadPending(); p.push(rec); savePending(p);
+      sv.textContent = "Saving your result to the staff log...";
+      flush().then(function(){ sv.textContent = "Result saved to the staff log."; })
+             .catch(function(){ sv.textContent = "Could not reach the staff log. Your result is saved on this computer and will send next time the test is opened."; });
+    } else { sv.textContent = "Result saved on this computer only. The staff log is not connected yet."; }
+    $("rWho").textContent = state.name+" · "+secName(state.sec);
+    $("rPct").textContent = pct+"%";
+    $("rPill").textContent = pass?"Pass":"Re-test needed"; $("rPill").className = "pill "+(pass?"pass":"fail");
+    $("rLine").textContent = state.right+" of "+total+" correct. "+(pass ? "You are over the "+PASS+"% pass mark." : "The pass mark is "+PASS+"%. Review the questions below and sit this section again.");
+    $("retry").textContent = pass ? "Sit this section again" : "Re-test this section";
+    var ml = $("missList"); ml.innerHTML = ""; $("missBox").hidden = !state.missed.length;
+    state.missed.forEach(function(m){
+      var d = el("div","miss");
+      d.appendChild(el("div","q",m.q)); d.appendChild(el("div","y","Your answer: "+m.y));
+      d.appendChild(el("div","c","Correct answer: "+m.c)); d.appendChild(el("div","muted",m.e));
+      ml.appendChild(d);
+    });
+    show("result");
+  }
+
+  $("next").addEventListener("click", function(){ state.i++; if(state.i<state.qs.length) renderQ(); else finish(); });
+  $("quit").addEventListener("click", function(){ renderStart(); show("start"); });
+  $("home").addEventListener("click", function(){ renderStart(); show("start"); });
+  $("retry").addEventListener("click", function(){ begin(state.sec); });
+  $("clearHist").addEventListener("click", function(){ saveHist([]); renderHist(); });
+  renderStart();
+  flush().catch(function(){});
+})();
+</script>
+</body>
+</html>
