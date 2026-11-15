@@ -82,5 +82,26 @@ tr.click{cursor:pointer} tr.click:hover td{background:var(--card)}
 .tabs button{background:transparent;border:2px solid transparent;border-bottom:none;padding:9px 14px;font-weight:700}
 .tabs button[aria-selected=true]{background:var(--ink);color:var(--paper)}
 .who{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+/* Scales with the screen: one column on a phone, wider with two-column lists on a desktop. */
+html{font-size:clamp(15px, 0.35vw + 13.5px, 18px)}
+body{font-size:1rem}
+h1{font-size:clamp(28px, 1.2vw + 22px, 42px)}
+h2{font-size:clamp(20px, 0.5vw + 18px, 26px)}
+.wrap{max-width:min(1080px, 100%)}
+#signin,#setpin,#quiz,#result{max-width:680px}
+@media (min-width:900px){
+  .wrap{padding:28px 32px 64px;gap:24px}
+  #mineTests,#secList{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  #secList .sec.full{grid-column:1 / -1}
+  .item{flex-wrap:nowrap}
+  .item > div:first-child{flex:1;min-width:0}
+  .item > .row{flex:none;flex-wrap:nowrap}
+}
+@media (max-width:480px){
+  .item{align-items:flex-start}
+  .item > div:first-child{flex:1 1 100%}
+  .tabs button{flex:1}
+  .who{font-size:13px}
+}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
