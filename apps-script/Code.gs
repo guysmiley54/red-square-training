@@ -39,7 +39,7 @@ const TABS = {
   Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned', 'Refresher every (months)'],
   Settings: ['Setting', 'Value'],
   Training: ['When', 'Name', 'Test key', 'Trained by'],
-  Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID']
+  Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID', 'Seconds taken']
 };
 const SEED_TESTS = [
   ['glenorchy-menu:breakfast', 'Glenorchy menu: Breakfast dishes'],
@@ -206,19 +206,21 @@ function attempt_(staff, req) {
   const pct = Math.round(right / total * 100);
   const key = clean_(req.testId, 40) + ':' + clean_(req.sectionId, 40);
   const id = clean_(req.id, 40);
+  const secs = Math.max(0, Math.min(7200, Math.round(Number(req.secs) || 0))); // how long the attempt took
   const missed = Array.isArray(req.missed) ? req.missed.map(function (m) { return clean_(m, 200); }).join(' | ') : '';
 
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
     // The page re-sends if it never hears back, so skip an attempt that is already logged.
+    fixHeader_('Attempts');
     const rows = readTab_('Attempts');
-    const idCol = TABS.Attempts.length - 1;
+    const idCol = 11; // the Attempt ID column
     if (id && rows.slice(-500).some(function (r) { return r[idCol] === id; })) return { ok: true, duplicate: true };
     appendRow_('Attempts', [new Date(), staff.name, staff.venueText, key, clean_(req.test, 60), clean_(req.section, 80),
-      right, total, pct, pct >= PASS_MARK ? 'Pass' : 'Re-test', clean_(missed, 5000), id]);
+      right, total, pct, pct >= PASS_MARK ? 'Pass' : 'Re-test', clean_(missed, 5000), id, secs]);
   } finally { lock.releaseLock(); }
-  try { emailResult_(staff, req, right, total, pct); } catch (e) { /* the result is saved either way */ }
+  try { emailResult_(staff, req, right, total, pct, secs); } catch (e) { /* the result is saved either way */ }
   return { ok: true, pct: pct, passed: pct >= PASS_MARK };
 }
 
@@ -331,7 +333,7 @@ function flags_(tests) {
 
 function attemptsFor_(staff, data) {
   return data.attempts.filter(function (a) { return norm_(a.name) === staff.key; }).map(function (a) {
-    return { when: a.when.toISOString(), key: a.key, test: a.test, section: a.section, right: a.right, total: a.total, pct: a.pct, missed: a.missed };
+    return { when: a.when.toISOString(), key: a.key, test: a.test, section: a.section, right: a.right, total: a.total, pct: a.pct, missed: a.missed, secs: a.secs };
   }).reverse();
 }
 
@@ -397,14 +399,14 @@ function p_(html) { return '<p style="margin:0 0 12px;">' + html + '</p>'; }
 /* -- the three emails -- */
 
 // To the person, straight after each attempt.
-function emailResult_(staff, req, right, total, pct) {
+function emailResult_(staff, req, right, total, pct, secs) {
   if (!staff.email || !emailsOn_()) return;
   const title = clean_(req.test, 60) + ': ' + clean_(req.section, 80);
   const pass = pct >= PASS_MARK;
   const review = (Array.isArray(req.review) ? req.review : []).slice(0, 40).map(function (m) {
     return { q: clean_(m && m.q, 300), a: clean_(m && m.a, 300) };
   });
-  const verdict = pass ? 'That is a pass.' : 'The pass mark is ' + PASS_MARK + '%, so this one needs another go.';
+  const verdict = (pass ? 'That is a pass.' : 'The pass mark is ' + PASS_MARK + '%, so this one needs another go.') + (secs ? ' It took you ' + took_(secs) + '.' : '');
 
   const text = 'Hi ' + first_(staff) + ',\n\nYou scored ' + right + ' out of ' + total + ' (' + pct + '%) on ' + title + '. ' + verdict +
     (review.length ? '\n\nThe ones you missed:\n\n' + review.map(function (m) { return '- ' + m.q + '\n  Answer: ' + m.a; }).join('\n\n')
@@ -453,7 +455,7 @@ function summaryFor_(viewer, data, now) {
     if (refresh.length) out.retest.push({ lead: s.name, detail: 'Refresher due: ' + shortTitles_(refresh.map(function (t) { return t.title; })), label: 'Refresher', tone: 'warn' });
     if (changed.length) out.retest.push({ lead: s.name, detail: 'Menu changed, re-sit: ' + shortTitles_(changed.map(function (t) { return t.title; })), label: 'Menu change', tone: 'warn' });
     data.attempts.filter(function (a) { return norm_(a.name) === s.key && a.when.getTime() >= from; }).forEach(function (a) {
-      out.results.push({ lead: s.name, detail: a.test + ': ' + a.section + ', ' + day_(a.when), label: a.pct + '%', tone: a.pct >= PASS_MARK ? 'good' : 'bad' });
+      out.results.push({ lead: s.name, detail: a.test + ': ' + a.section + ', ' + day_(a.when) + (a.secs ? ', ' + took_(a.secs) : ''), label: a.pct + '%', tone: a.pct >= PASS_MARK ? 'good' : 'bad' });
     });
     out.progress.push({ lead: s.name, detail: f.passed + ' of ' + f.required + ' passed' + (f.untrained.length ? ', ' + f.untrained.length + ' not trained yet' : ''),
       label: f.behind.length ? 'Behind' : (f.poor.length ? 'Needs help' : (f.required && f.passed === f.required ? 'Complete' : (f.untrained.length ? 'To train' : 'On track'))),
@@ -541,6 +543,7 @@ function reminderItems_(tests, now) {
 
 function shortTitle_(t) { return String(t).replace(/^[^:]*:\s*/, ''); }
 function shortTitles_(list) { return list.map(shortTitle_).join(', '); }
+function took_(secs) { const m = Math.floor(secs / 60), r = secs % 60; return m ? m + ' min' + (r ? ' ' + r + ' sec' : '') : r + ' sec'; }
 function first_(s) { return s.name.split(' ')[0]; }
 function day_(d) { return Utilities.formatDate(d, TIMEZONE, 'd MMM'); }
 
@@ -562,7 +565,7 @@ function load_() {
       refreshMonths: (r[5] === '' || r[5] == null || isNaN(Number(r[5]))) ? REFRESH_MONTHS : Number(r[5]) };
   }), attempts: readTab_('Attempts').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
     return { when: date_(r[0]) || new Date(0), name: String(r[1]), key: String(r[3]), test: String(r[4]), section: String(r[5]),
-      right: Number(r[6]) || 0, total: Number(r[7]) || 0, pct: Number(r[8]) || 0, missed: String(r[10] || '') };
+      right: Number(r[6]) || 0, total: Number(r[7]) || 0, pct: Number(r[8]) || 0, missed: String(r[10] || ''), secs: Number(r[12]) || 0 };
   }).sort(function (a, b) { return a.when - b.when; }) };
 }
 
@@ -592,6 +595,13 @@ function sheet_(name) {
     if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date(), REFRESH_MONTHS]); });
   }
   return sh;
+}
+
+// Adds any column headings a tab is missing, for tabs created before a column was added.
+function fixHeader_(name) {
+  const sh = sheet_(name), want = TABS[name];
+  const have = sh.getRange(1, 1, 1, want.length).getValues()[0];
+  want.forEach(function (h, i) { if (!String(have[i] || '').trim()) sh.getRange(1, i + 1).setValue(h).setFontWeight('bold'); });
 }
 
 function readTab_(name) { return sheet_(name).getDataRange().getValues().slice(1); }

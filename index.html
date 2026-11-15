@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115j">
+<link rel="stylesheet" href="common.css?v=20261115k">
 </head>
 <body>
 <div class="wrap">
@@ -97,8 +97,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115j"></script>
-<script src="common.js?v=20261115j"></script>
+<script src="config.js?v=20261115k"></script>
+<script src="common.js?v=20261115k"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -187,9 +187,9 @@
   function attemptsTable(table, attempts, showMissed){
     clear(table);
     if(!attempts.length){ table.appendChild(row(["No attempts yet."])); return; }
-    table.appendChild(row(showMissed ? ["When","Test","Score","Result","Questions missed"] : ["When","Test","Score","Result"], true));
+    table.appendChild(row(showMissed ? ["When","Test","Score","Time","Result","Questions missed"] : ["When","Test","Score","Time","Result"], true));
     attempts.forEach(function(a){
-      var cells = [T.fmtDateTime(a.when), a.test + ": " + a.section, a.right + "/" + a.total + " (" + a.pct + "%)", a.pct >= passMark ? pill("pass","Pass") : pill("fail","Re-test")];
+      var cells = [T.fmtDateTime(a.when), a.test + ": " + a.section, a.right + "/" + a.total + " (" + a.pct + "%)", a.secs ? Math.floor(a.secs / 60) + ":" + (a.secs % 60 < 10 ? "0" : "") + (a.secs % 60) : "", a.pct >= passMark ? pill("pass","Pass") : pill("fail","Re-test")];
       if(showMissed) cells.push(a.missed ? a.missed.split(" | ").join("; ") : "None");
       table.appendChild(row(cells));
     });

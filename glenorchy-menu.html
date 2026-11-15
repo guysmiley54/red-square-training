@@ -6,7 +6,7 @@
 <title>Glenorchy Menu Test</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115j">
+<link rel="stylesheet" href="common.css?v=20261115k">
 </head>
 <body>
 <div class="wrap">
@@ -29,7 +29,7 @@
   <!-- QUIZ -->
   <section id="quiz" class="stack" hidden>
     <p id="modeNote" hidden><span class="marker">Practice run. Nothing is saved.</span></p>
-    <div class="meta"><span id="qSec"></span><span id="qNum"></span></div>
+    <div class="meta"><span id="qSec"></span><span><span id="qNum"></span> · <span id="qClock">0:00</span></span></div>
     <div class="bar"><i id="qBar" style="width:0"></i></div>
     <h2 id="qText"></h2>
     <div id="opts" class="stack" style="gap:10px"></div>
@@ -55,9 +55,9 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115j"></script>
-<script src="common.js?v=20261115j"></script>
-<script src="glenorchy-menu.questions.js?v=20261115j"></script>
+<script src="config.js?v=20261115k"></script>
+<script src="common.js?v=20261115k"></script>
+<script src="glenorchy-menu.questions.js?v=20261115k"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -82,7 +82,7 @@
     function add(id, name, blurb, n, full){
       var b = el("button","sec"+(full?" full":"")); b.type="button";
       var l = el("span"); l.appendChild(el("b",null,name)); l.appendChild(el("small",null,blurb));
-      b.appendChild(l); b.appendChild(el("span","n", n+" questions"));
+      b.appendChild(l); b.appendChild(el("span","n", n+" questions · about "+Math.max(1, Math.round(n*20/60))+" min"));
       b.addEventListener("click", function(){ begin(id, id === "full"); });
       list.appendChild(b);
     }
@@ -94,11 +94,17 @@
 
   function begin(sec, practice){
     var pool = sec==="full" ? shuffle(QUESTIONS).slice(0, FULL_COUNT) : shuffle(QUESTIONS.filter(function(q){ return q.s===sec; }));
-    state = { sec:sec, qs:pool, i:0, right:0, missed:[], record:null, practice:!!practice };
+    state = { sec:sec, qs:pool, i:0, right:0, missed:[], record:null, practice:!!practice, started:Date.now(), secs:0 };
+    clearInterval(ticker); ticker = setInterval(tick, 1000);
     $("modeNote").hidden = !practice;
     show("quiz"); renderQ();
   }
 
+  // The clock shows how long the test is taking. There is no time limit.
+  var ticker = null;
+  function mmss(n){ var m = Math.floor(n / 60), r = n % 60; return m + ":" + (r < 10 ? "0" : "") + r; }
+  function took(n){ var m = Math.floor(n / 60), r = n % 60; return m ? m + " min" + (r ? " " + r + " sec" : "") : r + " sec"; }
+  function tick(){ if(!state || $("quiz").hidden) return; state.secs = Math.round((Date.now() - state.started) / 1000); $("qClock").textContent = mmss(state.secs); }
   function renderQ(){
     var q = state.qs[state.i];
     $("qSec").textContent = secName(q.s);
@@ -139,14 +145,15 @@
   }
 
   function finish(){
+    clearInterval(ticker); state.secs = Math.round((Date.now() - state.started) / 1000);
     var total = state.qs.length, pct = Math.round(state.right/total*100), pass = pct>=PASS;
     state.record = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,8), testId:TEST_ID, sectionId:state.sec, test:TEST_NAME,
-      section:secName(state.sec), right:state.right, total:total, missed:state.missed.map(function(m){ return m.q; }),
+      section:secName(state.sec), right:state.right, total:total, secs:state.secs, missed:state.missed.map(function(m){ return m.q; }),
       review:state.missed.map(function(m){ return {q:m.q, a:m.c}; })};
     $("rWho").textContent = session.profile.name+" · "+secName(state.sec);
     $("rPct").textContent = pct+"%";
     $("rPill").textContent = pass?"Pass":"Re-test needed"; $("rPill").className = "pill "+(pass?"pass":"fail");
-    $("rLine").textContent = state.right+" of "+total+" correct. "+(pass ? "You are over the "+PASS+"% pass mark." : "The pass mark is "+PASS+"%. Review the questions below and sit this section again.");
+    $("rLine").textContent = state.right+" of "+total+" correct in "+took(state.secs)+". "+(pass ? "You are over the "+PASS+"% pass mark." : "The pass mark is "+PASS+"%. Review the questions below and sit this section again.");
     $("retry").textContent = pass ? "Sit this section again" : "Re-test this section";
     var ml = $("missList"); ml.innerHTML = ""; $("missBox").hidden = !state.missed.length;
     state.missed.forEach(function(m){
@@ -158,13 +165,13 @@
     show("result");
     if(state.practice){
       $("rSave").className = "note"; $("rSave").textContent = "This was a practice run. Nothing was saved to your profile."; $("rRetrySave").hidden = true;
-      $("rLine").textContent = state.right+" of "+total+" correct. "+(pass ? "That would be a pass. You look ready for the real test." : "The pass mark is "+PASS+"%. Read through the ones below, then have another go.");
+      $("rLine").textContent = state.right+" of "+total+" correct in "+took(state.secs)+". "+(pass ? "That would be a pass. You look ready for the real test." : "The pass mark is "+PASS+"%. Read through the ones below, then have another go.");
       $("retry").textContent = "Practise again"; $("realTest").hidden = false; $("realTest").href = "glenorchy-menu.html#" + state.sec;
     } else { $("realTest").hidden = true; save(); }
   }
 
   $("next").addEventListener("click", function(){ state.i++; if(state.i<state.qs.length) renderQ(); else finish(); });
-  $("quit").addEventListener("click", function(){ show("start"); });
+  $("quit").addEventListener("click", function(){ clearInterval(ticker); show("start"); });
   $("retry").addEventListener("click", function(){ begin(state.sec, state.practice); });
   $("realTest").addEventListener("click", function(e){ e.preventDefault(); begin(state.sec, false); });
   $("rRetrySave").addEventListener("click", save);
