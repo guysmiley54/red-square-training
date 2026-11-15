@@ -15,7 +15,7 @@
  * reminder a week (Monday) while they have a test to do. Managers also get a Monday follow-up list.
  *
  * Nobody sees anything without signing in. Crew see their own results only.
- * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone and are not tested.
+ * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone, and can sit any test to try it, but nothing is required of them.
  */
 const SHEET_ID = '15ax94vTHrcXj73P3CmR-hwgc7nUEBOr5kCVwXKuMbkQ'; // "Staff Training Log" spreadsheet
 const PASS_MARK = 80;       // percent
@@ -56,6 +56,7 @@ function doPost(e) {
 
 function route_(req) {
   switch (req.action) {
+    case 'roster': return roster_();
     case 'login': return login_(req);
     case 'me': return me_(auth_(req));
     case 'attempt': return attempt_(auth_(req), req);
@@ -66,16 +67,55 @@ function route_(req) {
 
 /* ---------- sign-in ---------- */
 
+// The sign-in drop-down. Shows first name and last initial only, because the site is public.
+function roster_() {
+  const list = staffList_();
+  const labels = shortLabels_(list.map(function (s) { return s.name; }));
+  return { ok: true, staff: list.map(function (s, i) { return { id: staffId_(s.key), label: labels[i] }; })
+    .sort(function (a, b) { return a.label.localeCompare(b.label); }) };
+}
+
+// "Isabella Stocks" becomes "Isabella S.", with more of the surname only where two people would look the same.
+function shortLabels_(names) {
+  const parts = names.map(function (n) { const p = n.split(' '); return { first: p[0], last: p.slice(1).join(' ') }; });
+  const letters = parts.map(function () { return 1; });
+  const label = function (i) {
+    const p = parts[i];
+    if (!p.last) return p.first;
+    return letters[i] >= p.last.length ? p.first + ' ' + p.last : p.first + ' ' + p.last.slice(0, letters[i]) + '.';
+  };
+  for (let round = 0; round < 30; round++) {
+    const seen = {};
+    // Same first letter and same visible surname counts as a clash, so Isabella S. and Isobella S. get told apart.
+    parts.forEach(function (p, i) { const l = (p.first.charAt(0) + '|' + label(i).slice(p.first.length)).toLowerCase(); (seen[l] = seen[l] || []).push(i); });
+    let clash = false;
+    Object.keys(seen).forEach(function (l) {
+      if (seen[l].length > 1) seen[l].forEach(function (i) { if (letters[i] < parts[i].last.length) { letters[i]++; clash = true; } });
+    });
+    if (!clash) break;
+  }
+  return parts.map(function (p, i) { return label(i); });
+}
+
+// An opaque id for the drop-down, so the page never needs anyone's full name.
+function staffId_(key) {
+  return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, secret_('SALT') + '|id|' + key)).slice(0, 16);
+}
+
 function login_(req) {
-  const name = norm_(req.name);
+  let name = norm_(req.name);
+  if (req.id) {
+    const picked = staffList_().filter(function (s) { return staffId_(s.key) === String(req.id); })[0];
+    name = picked ? picked.key : '';
+  }
   const pin = String(req.pin == null ? '' : req.pin);
   const cache = CacheService.getScriptCache();
-  const failKey = 'fail:' + name;
+  const failKey = 'fail:' + (name || 'unknown');
   const fails = Number(cache.get(failKey)) || 0;
   if (fails >= MAX_PIN_TRIES) return { ok: false, error: 'Too many wrong tries. Wait 15 minutes, or ask your manager to reset your PIN.' };
   const miss = function () {
     cache.put(failKey, String(fails + 1), 900);
-    return { ok: false, error: 'That name and PIN do not match. Check the spelling of your name.' };
+    return { ok: false, error: 'That PIN is not right for that name.' };
   };
 
   const staff = findStaff_(name);
@@ -197,10 +237,10 @@ function member_(s, data, now) {
 
 // One entry per required test that applies to this person.
 function status_(staff, data, now) {
-  if (staff.role === 'Owner') return [];
+  const owner = staff.role === 'Owner'; // owners can sit any test to try it or demo it; nothing is due for them
   const mine = data.attempts.filter(function (a) { return norm_(a.name) === staff.key; });
   return data.tests.filter(function (t) {
-    return t.required && (t.venue === 'all' || staff.venues.indexOf('all') !== -1 || staff.venues.indexOf(t.venue) !== -1);
+    return t.required && (owner || t.venue === 'all' || staff.venues.indexOf('all') !== -1 || staff.venues.indexOf(t.venue) !== -1);
   }).map(function (t) {
     const at = mine.filter(function (a) { return a.key === t.key; });
     const passes = at.filter(function (a) { return a.pct >= PASS_MARK; });
@@ -217,8 +257,10 @@ function status_(staff, data, now) {
     const due = new Date(from + DUE_DAYS * 86400000);
     return {
       key: t.key, title: t.title,
-      state: passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latest ? 'retest' : 'todo'))),
-      due: due.toISOString(),
+      state: owner ? (lastPass ? 'passed' : (latest ? 'retest' : 'todo'))
+        : (passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latest ? 'retest' : 'todo')))),
+      due: owner ? null : due.toISOString(),
+      optional: owner,
       passedOn: lastPass ? lastPass.when.toISOString() : null,
       refreshOn: refreshFrom ? refreshFrom.toISOString() : null,
       best: at.length ? Math.max.apply(null, at.map(function (a) { return a.pct; })) : null,
@@ -297,7 +339,7 @@ function managerDigest_(data, now) {
 }
 
 function staffReminders_(data, now) {
-  data.staff.filter(function (s) { return s.email; }).forEach(function (s) {
+  data.staff.filter(function (s) { return s.email && s.role !== 'Owner'; }).forEach(function (s) {
     const lines = reminderLines_(status_(s, data, now), now);
     if (!lines.length) return;
     MailApp.sendEmail(s.email, 'Menu training: ' + lines.length + (lines.length === 1 ? ' test' : ' tests') + ' to do',

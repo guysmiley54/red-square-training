@@ -20,8 +20,8 @@
     <p><span class="marker">Sign in to your training</span></p>
     <form id="signinForm" class="stack" autocomplete="off">
       <div class="stack" style="gap:6px">
-        <label for="name">Your name</label>
-        <input type="text" id="name" placeholder="First and last name, as on the roster" autocomplete="off">
+        <label for="who">Your name</label>
+        <select id="who"><option value="">Loading names...</option></select>
       </div>
       <div class="stack" style="gap:6px">
         <label for="pin">Your 4-digit PIN</label>
@@ -65,7 +65,7 @@
     <!-- my training -->
     <div id="mine" class="stack" hidden>
       <div id="mineAlert"></div>
-      <h2>Tests to pass</h2>
+      <h2 id="mineHead">Tests to pass</h2>
       <div id="mineTests" class="stack" style="gap:10px"></div>
       <div id="mineExtra" class="stack" style="gap:10px"></div>
       <h2>My attempts</h2>
@@ -114,11 +114,11 @@
 
   $("signinForm").addEventListener("submit", function(e){
     e.preventDefault(); setErr("signinErr");
-    var name = $("name").value.trim(), pin = $("pin").value.trim();
-    if(!name){ setErr("signinErr", "Enter your name."); return; }
+    var sel = $("who"), id = sel.value, pin = $("pin").value.trim();
+    if(!id){ setErr("signinErr", "Choose your name."); return; }
     busy($("signinBtn"), true, "Signing in...");
-    T.api("login", {name:name, pin:pin}).then(signedIn).catch(function(err){
-      if(err.needPin){ pendingName = name; $("setpinName").textContent = name; $("newPin").value = ""; $("newPin2").value = ""; setErr("setpinErr"); show("setpin"); $("newPin").focus(); }
+    T.api("login", {id:id, pin:pin}).then(signedIn).catch(function(err){
+      if(err.needPin){ pendingName = id; $("setpinName").textContent = sel.options[sel.selectedIndex].textContent; $("newPin").value = ""; $("newPin2").value = ""; setErr("setpinErr"); show("setpin"); $("newPin").focus(); }
       else setErr("signinErr", err.message);
     }).then(function(){ busy($("signinBtn"), false, "Sign in"); });
   });
@@ -129,11 +129,19 @@
     if(!/^\d{4}$/.test(a)){ setErr("setpinErr", "Your PIN must be 4 digits."); return; }
     if(a !== b){ setErr("setpinErr", "Those two PINs do not match."); return; }
     busy($("setpinBtn"), true, "Saving...");
-    T.api("login", {name:pendingName, newPin:a}).then(signedIn).catch(function(err){ setErr("setpinErr", err.message); })
+    T.api("login", {id:pendingName, newPin:a}).then(signedIn).catch(function(err){ setErr("setpinErr", err.message); })
       .then(function(){ busy($("setpinBtn"), false, "Save PIN and sign in"); });
   });
   $("setpinBack").addEventListener("click", function(){ show("signin"); });
   $("signout").addEventListener("click", T.signOut);
+
+  function loadRoster(){
+    var sel = $("who");
+    T.api("roster").then(function(res){
+      clear(sel); var first = el("option", null, "Choose your name"); first.value = ""; sel.appendChild(first);
+      res.staff.forEach(function(p){ var o = el("option", null, p.label); o.value = p.id; sel.appendChild(o); });
+    }).catch(function(err){ clear(sel).appendChild(el("option", null, "Names could not be loaded")); setErr("signinErr", err.message); });
+  }
 
   /* ---------- status wording ---------- */
   function testPill(t){
@@ -147,6 +155,7 @@
     if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.refreshOn ? ". Refresher from " + T.fmtDate(t.refreshOn) : "") + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
     if(t.state === "refresh") return "Last passed " + T.fmtDate(t.passedOn) + ". Refresher due by " + T.fmtDate(t.due);
     var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
+    if(!t.due) return last + "Optional for you";
     if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
     return last + "Due " + T.fmtDate(t.due);
   }
@@ -199,13 +208,15 @@
 
   function renderMine(res){
     var mine = res.tests.filter(function(t){ return t.state !== "passed"; });
+    var optional = res.tests.length && res.tests.every(function(t){ return t.optional; });
+    $("mineHead").textContent = optional ? "Tests you can try" : "Tests to pass";
     var lines = [];
     res.tests.forEach(function(t){
       if(t.state === "overdue") lines.push(t.title + " was due " + T.fmtDate(t.due));
       else if(t.state === "retest") lines.push(t.title + " needs a re-test. Your last score was " + t.latestPct + "%");
       else if(t.state === "refresh") lines.push(t.title + " is due for a refresher by " + T.fmtDate(t.due));
     });
-    alertBox($("mineAlert"), lines, res.tests.length && !mine.length ? "You have passed every required test." : "");
+    alertBox($("mineAlert"), optional ? [] : lines, res.tests.length && !mine.length && !optional ? "You have passed every required test." : "");
     var list = clear($("mineTests"));
     if(!res.tests.length) list.appendChild(el("p", "muted", "No tests have been assigned to you yet."));
     res.tests.forEach(function(t){
@@ -278,7 +289,7 @@
   /* ---------- start ---------- */
   if(!window.TRAINING_API){ show("signin"); setErr("signinErr", "The staff log is not connected yet, so nobody can sign in."); $("signinBtn").disabled = true; }
   else if(T.getSession()) openHome();
-  else { show("signin"); $("name").focus(); }
+  else { show("signin"); loadRoster(); }
 })();
 </script>
 </body>

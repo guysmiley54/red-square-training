@@ -2,7 +2,7 @@
 
 Staff knowledge tests for Red Square Cafe, hosted on GitHub Pages.
 
-Everyone signs in with their name and a 4-digit PIN. Crew see their own tests and results. Managers also get a crew view for their venue, with flags for anyone behind or scoring under the pass mark. Owners see every venue.
+Everyone picks their name from a drop-down (first name and last initial) and enters a 4-digit PIN. Crew see their own tests and results. Managers also get a crew view for their venue, with flags for anyone behind or scoring under the pass mark. Owners see every venue.
 
 ## Files
 
@@ -25,7 +25,7 @@ Everyone signs in with their name and a 4-digit PIN. Crew see their own tests an
 - Pass mark 80%.
 - Behind: a required test not passed by its due date.
 - Needs help: the latest attempt at a test is under the pass mark.
-- Owners are not tested and do not appear in crew lists.
+- Owners can sit any test to try or demo it, but nothing is required of them and they do not appear in crew lists or get reminders.
 - A pass lasts 6 months, then a refresher is due within 14 days. Change the months per test in the Tests tab (0 = never).
 - Anyone with an Email in the Staff tab is emailed their result after each attempt, and at most one reminder a week (Monday 8am) while they have a test overdue, failed, up for a refresher, or due within 7 days.
 - Managers with an Email also get a Monday follow-up list. The Monday run is switched on by running `installWeeklyEmail` once in the Apps Script editor.

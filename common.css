@@ -33,9 +33,9 @@ a{color:inherit}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .between{justify-content:space-between}
 label{font-weight:700;font-size:14px}
-input[type=text],input[type=password]{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--ink);padding:11px 12px;width:100%;border-radius:0}
+input[type=text],input[type=password],select{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--ink);padding:11px 12px;width:100%;border-radius:0}
 button{font:inherit;cursor:pointer;color:inherit}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .sec{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;background:var(--card);border:2px solid var(--ink);padding:13px 14px;text-decoration:none}
 .sec:hover{box-shadow:4px 4px 0 var(--ink)}
 .sec b{font-family:var(--display);font-weight:700;font-size:17px;display:block}
