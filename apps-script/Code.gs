@@ -7,8 +7,11 @@
  * The "Staff Training Log" spreadsheet holds three tabs:
  *   Staff     one row per person. Leave the PIN column empty; each person sets their own PIN the
  *             first time they sign in. Clear the cell to reset a forgotten PIN.
- *   Tests     the tests each venue's crew must pass, and the date each was assigned.
+ *   Tests     the tests each venue's crew must pass, the date each was assigned, and how often a refresher is due.
  *   Attempts  one row per test attempt (written by this script).
+ *
+ * Each person with an email in the Staff tab gets their result after every attempt, and at most one
+ * reminder a week (Monday) while they have a test to do. Managers also get a Monday follow-up list.
  *
  * Nobody sees anything without signing in. Crew see their own results only.
  * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone and are not tested.
@@ -16,6 +19,8 @@
 const SHEET_ID = '15ax94vTHrcXj73P3CmR-hwgc7nUEBOr5kCVwXKuMbkQ'; // "Staff Training Log" spreadsheet
 const PASS_MARK = 80;       // percent
 const DUE_DAYS = 14;        // days to pass a required test after it is assigned
+const REFRESH_MONTHS = 6;   // a pass lasts this long before a refresher is due (override per test in the Tests tab, 0 = never)
+const REMIND_WITHIN_DAYS = 7; // the weekly reminder mentions a test once it is due within this many days
 const SESSION_HOURS = 4;    // how long a sign-in lasts
 const MAX_PIN_TRIES = 5;    // wrong PINs before a 15 minute lockout
 const TIMEZONE = 'Australia/Hobart';
@@ -23,7 +28,7 @@ const SITE_URL = 'https://guysmiley54.github.io/red-square-training/';
 
 const TABS = {
   Staff: ['Name', 'Venue', 'Role', 'Email', 'Start date', 'Active', 'PIN (set by staff, clear to reset)'],
-  Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned'],
+  Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned', 'Refresher every (months)'],
   Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID']
 };
 const SEED_TESTS = [
@@ -162,6 +167,7 @@ function attempt_(staff, req) {
     appendRow_('Attempts', [new Date(), staff.name, staff.venueText, key, clean_(req.test, 60), clean_(req.section, 80),
       right, total, pct, pct >= PASS_MARK ? 'Pass' : 'Re-test', clean_(missed, 5000), id]);
   } finally { lock.releaseLock(); }
+  try { emailResult_(staff, req, right, total, pct); } catch (e) { /* the result is saved either way */ }
   return { ok: true, pct: pct, passed: pct >= PASS_MARK };
 }
 
@@ -197,16 +203,22 @@ function status_(staff, data, now) {
     const at = mine.filter(function (a) { return a.key === t.key; });
     const passes = at.filter(function (a) { return a.pct >= PASS_MARK; });
     const latest = at.length ? at[at.length - 1] : null;
+    const lastPass = passes.length ? passes[passes.length - 1] : null;
     let failsInRow = 0;
     for (let i = at.length - 1; i >= 0 && at[i].pct < PASS_MARK; i--) failsInRow++;
-    const from = Math.max(t.assigned ? t.assigned.getTime() : 0, staff.start ? staff.start.getTime() : 0) || now.getTime();
+    // A pass runs out after the refresher period, then the test is due again.
+    const refreshFrom = lastPass && t.refreshMonths > 0 ? addMonths_(lastPass.when, t.refreshMonths) : null;
+    const needsRefresh = !!refreshFrom && now.getTime() > refreshFrom.getTime();
+    const passed = !!lastPass && !needsRefresh;
+    const from = needsRefresh ? refreshFrom.getTime()
+      : (Math.max(t.assigned ? t.assigned.getTime() : 0, staff.start ? staff.start.getTime() : 0) || now.getTime());
     const due = new Date(from + DUE_DAYS * 86400000);
-    const passed = passes.length > 0;
     return {
       key: t.key, title: t.title,
-      state: passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (latest ? 'retest' : 'todo')),
+      state: passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latest ? 'retest' : 'todo'))),
       due: due.toISOString(),
-      passedOn: passed ? passes[0].when.toISOString() : null,
+      passedOn: lastPass ? lastPass.when.toISOString() : null,
+      refreshOn: refreshFrom ? refreshFrom.toISOString() : null,
       best: at.length ? Math.max.apply(null, at.map(function (a) { return a.pct; })) : null,
       tries: at.length,
       latestPct: latest ? latest.pct : null,
@@ -236,12 +248,35 @@ function attemptsFor_(staff, data) {
 
 function profile_(s) { return { name: s.name, venue: s.venueText, role: s.role }; }
 
-/* ---------- weekly email to managers ---------- */
+/* ---------- emails ---------- */
 
-// Run installWeeklyEmail() once from the editor to switch this on.
+const SIGN_OFF = 'Adrian, Mic and the Red Square Crew';
+const OWN_TIME = 'at work or in your own time, whichever suits you';
+
+// Sent to the person straight after each attempt, if they have an email in the Staff tab.
+function emailResult_(staff, req, right, total, pct) {
+  if (!staff.email) return;
+  const title = clean_(req.test, 60) + ': ' + clean_(req.section, 80);
+  const review = (Array.isArray(req.review) ? req.review : []).slice(0, 40).map(function (m) {
+    return '- ' + clean_(m && m.q, 300) + '\n  Answer: ' + clean_(m && m.a, 300);
+  });
+  MailApp.sendEmail(staff.email, 'Your result: ' + title + ' ' + pct + '%',
+    'Hi ' + first_(staff) + ',\n\nYou scored ' + right + ' out of ' + total + ' (' + pct + '%) on ' + title + '. ' +
+    (pct >= PASS_MARK ? 'That is a pass.' : 'The pass mark is ' + PASS_MARK + '%, so this one needs another go.') +
+    (review.length ? '\n\nThe ones you missed:\n\n' + review.join('\n\n') : '\n\nYou did not miss a single question.') +
+    '\n\nYou can sit it again any time, ' + OWN_TIME + ':\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n');
+}
+
+// Runs every Monday morning. Managers get their follow-up list, and anyone with a test
+// to do gets one reminder. Nobody gets more than one reminder a week.
 function weeklyDigest() {
   const data = load_();
   const now = new Date();
+  managerDigest_(data, now);
+  staffReminders_(data, now);
+}
+
+function managerDigest_(data, now) {
   data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
     const lines = [];
     crewOf_(m, data).forEach(function (s) {
@@ -253,10 +288,37 @@ function weeklyDigest() {
     });
     if (!lines.length) return;
     MailApp.sendEmail(m.email, 'Staff training: ' + lines.length + ' to follow up',
-      'Hi ' + m.name.split(' ')[0] + ',\n\nThese need a follow up this week:\n\n- ' + lines.join('\n- ') +
+      'Hi ' + first_(m) + ',\n\nThese need a follow up this week:\n\n- ' + lines.join('\n- ') +
       '\n\nThe pass mark is ' + PASS_MARK + '% and each test is due ' + DUE_DAYS + ' days after it is assigned.\n\nCrew view: ' + SITE_URL + '\n');
   });
 }
+
+function staffReminders_(data, now) {
+  data.staff.filter(function (s) { return s.email; }).forEach(function (s) {
+    const lines = reminderLines_(status_(s, data, now), now);
+    if (!lines.length) return;
+    MailApp.sendEmail(s.email, 'Menu training: ' + lines.length + (lines.length === 1 ? ' test' : ' tests') + ' to do',
+      'Hi ' + first_(s) + ',\n\nHere is where your training is at:\n\n- ' + lines.join('\n- ') +
+      '\n\nYou can do these ' + OWN_TIME + '. Sign in here:\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n');
+  });
+}
+
+// Tests worth a nudge: overdue, a failed last try, a refresher that has come up, or due within the week.
+function reminderLines_(tests, now) {
+  const soon = now.getTime() + REMIND_WITHIN_DAYS * 86400000;
+  const out = [];
+  tests.forEach(function (t) {
+    const due = new Date(t.due);
+    if (t.state === 'overdue') out.push(t.title + ': was due ' + day_(due));
+    else if (t.state === 'refresh') out.push(t.title + ': refresher due by ' + day_(due) + ' (last passed ' + day_(new Date(t.passedOn)) + ')');
+    else if (t.state === 'retest') out.push(t.title + ': last try ' + t.latestPct + '%, needs a re-test by ' + day_(due));
+    else if (t.state === 'todo' && due.getTime() <= soon) out.push(t.title + ': due ' + day_(due));
+  });
+  return out;
+}
+
+function first_(s) { return s.name.split(' ')[0]; }
+function day_(d) { return Utilities.formatDate(d, TIMEZONE, 'd MMM'); }
 
 function installWeeklyEmail() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'weeklyDigest') ScriptApp.deleteTrigger(t); });
@@ -270,7 +332,8 @@ function setup() { Object.keys(TABS).forEach(function (n) { sheet_(n); }); }
 
 function load_() {
   return { staff: staffList_(), tests: readTab_('Tests').filter(function (r) { return r[0]; }).map(function (r) {
-    return { key: String(r[0]).trim(), title: String(r[1] || r[0]), venue: norm_(r[2]) || 'all', required: !/^n/i.test(String(r[3]).trim()), assigned: date_(r[4]) };
+    return { key: String(r[0]).trim(), title: String(r[1] || r[0]), venue: norm_(r[2]) || 'all', required: !/^n/i.test(String(r[3]).trim()), assigned: date_(r[4]),
+      refreshMonths: (r[5] === '' || r[5] == null || isNaN(Number(r[5]))) ? REFRESH_MONTHS : Number(r[5]) };
   }), attempts: readTab_('Attempts').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
     return { when: date_(r[0]) || new Date(0), name: String(r[1]), key: String(r[3]), test: String(r[4]), section: String(r[5]),
       right: Number(r[6]) || 0, total: Number(r[7]) || 0, pct: Number(r[8]) || 0, missed: String(r[10] || '') };
@@ -299,7 +362,7 @@ function sheet_(name) {
     sh.appendRow(TABS[name]);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, TABS[name].length).setFontWeight('bold');
-    if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date()]); });
+    if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date(), REFRESH_MONTHS]); });
   }
   return sh;
 }
@@ -310,6 +373,7 @@ function setCell_(name, row, col, value) { sheet_(name).getRange(row, col).setVa
 
 /* ---------- small helpers ---------- */
 
+function addMonths_(d, n) { const x = new Date(d.getTime()); x.setMonth(x.getMonth() + n); return x; }
 function norm_(v) { return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' '); }
 function date_(v) {
   if (v instanceof Date) return isNaN(v.getTime()) ? null : v;

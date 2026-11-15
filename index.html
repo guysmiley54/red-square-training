@@ -140,10 +140,12 @@
     if(t.state === "passed") return pill("pass", "Passed " + t.best + "%");
     if(t.state === "overdue") return pill("fail", "Overdue");
     if(t.state === "retest") return pill("warn", "Re-test");
+    if(t.state === "refresh") return pill("warn", "Refresher due");
     return pill("plain", "To do");
   }
   function testLine(t){
-    if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
+    if(t.state === "passed") return "Passed " + T.fmtDate(t.passedOn) + (t.refreshOn ? ". Refresher from " + T.fmtDate(t.refreshOn) : "") + (t.failsInRow ? ". Latest try " + t.latestPct + "%" : "");
+    if(t.state === "refresh") return "Last passed " + T.fmtDate(t.passedOn) + ". Refresher due by " + T.fmtDate(t.due);
     var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
     if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
     return last + "Due " + T.fmtDate(t.due);
@@ -201,6 +203,7 @@
     res.tests.forEach(function(t){
       if(t.state === "overdue") lines.push(t.title + " was due " + T.fmtDate(t.due));
       else if(t.state === "retest") lines.push(t.title + " needs a re-test. Your last score was " + t.latestPct + "%");
+      else if(t.state === "refresh") lines.push(t.title + " is due for a refresher by " + T.fmtDate(t.due));
     });
     alertBox($("mineAlert"), lines, res.tests.length && !mine.length ? "You have passed every required test." : "");
     var list = clear($("mineTests"));
@@ -210,7 +213,7 @@
       left.appendChild(el("div", "t", t.title)); left.appendChild(el("div", "note", testLine(t)));
       var right = el("div", "row"); right.appendChild(testPill(t));
       var link = T.testLink(t.key);
-      if(link){ var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.tries ? "Re-test" : "Start")); a.href = link; right.appendChild(a); }
+      if(link){ var a = el("a", "btn small" + (t.state === "passed" ? " ghost" : ""), t.state === "passed" ? "Sit again" : (t.state === "refresh" ? "Sit refresher" : (t.tries ? "Re-test" : "Start"))); a.href = link; right.appendChild(a); }
       item.appendChild(left); item.appendChild(right); list.appendChild(item);
     });
     var extra = clear($("mineExtra"));

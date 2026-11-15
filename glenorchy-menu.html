@@ -127,7 +127,7 @@
   function save(){
     var sv = $("rSave"); $("rRetrySave").hidden = true;
     sv.className = "note"; sv.textContent = "Saving your result to your profile...";
-    T.api("attempt", state.record).then(function(){ sv.textContent = "Result saved to your profile."; })
+    T.api("attempt", state.record).then(function(){ sv.textContent = "Result saved to your profile. If your email is on file, a copy is on its way to you."; })
       .catch(function(err){
         if(!T.getSession()){ sv.className = "err"; sv.textContent = "Your sign-in ran out before this result was saved. Tell your manager your score, then sign in and sit it again."; return; }
         sv.className = "err"; sv.textContent = "This result has not been saved. " + err.message; $("rRetrySave").hidden = false;
@@ -137,7 +137,8 @@
   function finish(){
     var total = state.qs.length, pct = Math.round(state.right/total*100), pass = pct>=PASS;
     state.record = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,8), testId:TEST_ID, sectionId:state.sec, test:TEST_NAME,
-      section:secName(state.sec), right:state.right, total:total, missed:state.missed.map(function(m){ return m.q; })};
+      section:secName(state.sec), right:state.right, total:total, missed:state.missed.map(function(m){ return m.q; }),
+      review:state.missed.map(function(m){ return {q:m.q, a:m.c}; })};
     $("rWho").textContent = session.profile.name+" · "+secName(state.sec);
     $("rPct").textContent = pct+"%";
     $("rPill").textContent = pass?"Pass":"Re-test needed"; $("rPill").className = "pill "+(pass?"pass":"fail");

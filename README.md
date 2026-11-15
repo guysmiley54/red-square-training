@@ -24,4 +24,6 @@ Everyone signs in with their name and a 4-digit PIN. Crew see their own tests an
 - Behind: a required test not passed by its due date.
 - Needs help: the latest attempt at a test is under the pass mark.
 - Owners are not tested and do not appear in crew lists.
-- Weekly email to managers with an Email set: run `installWeeklyEmail` once in the Apps Script editor.
+- A pass lasts 6 months, then a refresher is due within 14 days. Change the months per test in the Tests tab (0 = never).
+- Anyone with an Email in the Staff tab is emailed their result after each attempt, and at most one reminder a week (Monday 8am) while they have a test overdue, failed, up for a refresher, or due within 7 days.
+- Managers with an Email also get a Monday follow-up list. The Monday run is switched on by running `installWeeklyEmail` once in the Apps Script editor.
