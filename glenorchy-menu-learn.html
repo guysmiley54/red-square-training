@@ -6,238 +6,172 @@
 <title>Glenorchy Menu Guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115i">
+<link rel="stylesheet" href="common.css?v=20261115j">
 <style>
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chips a{border:2px solid var(--ink);padding:6px 10px;font-weight:700;font-size:14px;text-decoration:none}
-.chips a:hover{background:var(--ink);color:var(--paper)}
-.learn section{display:flex;flex-direction:column;gap:14px;border-top:3px solid var(--ink);padding-top:18px;scroll-margin-top:12px}
-.cards{display:grid;grid-template-columns:1fr;gap:10px}
-@media (min-width:760px){.cards{grid-template-columns:1fr 1fr}}
-.card{background:var(--card);border:2px solid var(--rule);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-.card h3{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-.card h3 span{font-family:var(--body);font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
-.card p{font-size:15px}
-.card .tip{color:var(--muted);font-size:14px}
-.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;border:1.5px solid var(--muted);color:var(--muted);padding:0 5px;margin-right:4px;text-transform:uppercase}
-.key{border-left:5px solid var(--red);background:var(--card);padding:10px 14px}
-.key b{display:block}
-.learn td:first-child{font-weight:700}
-.learn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+/* Layout idea: pick a section, then step through it one slide at a time. Every item is the same card. */
+.tiles{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:700px){.tiles{grid-template-columns:1fr 1fr}}
+.deckbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.deckbar .count{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.slide{display:flex;flex-direction:column;gap:14px;min-height:300px}
+.slide h2{font-size:clamp(24px, 1.4vw + 20px, 36px)}
+.cards{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:760px){.cards.c2{grid-template-columns:1fr 1fr}.cards.c3{grid-template-columns:1fr 1fr 1fr}}
+.card{background:var(--card);border:2px solid var(--ink);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.card h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:20px;flex-wrap:wrap}
+.card h3 span{font-family:var(--body);font-weight:700;font-size:15px;color:var(--red);white-space:nowrap}
+.card p{font-size:1.05rem}
+.card .tip{color:var(--muted);font-size:.95rem}
+.cards.solo .card{padding:22px 24px}
+.cards.solo .card h3{font-size:clamp(24px, 1.4vw + 20px, 36px);font-weight:900}
+.cards.solo .card h3 span{font-size:18px}
+.cards.solo .card p{font-size:1.2rem}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;border:1.5px solid var(--muted);color:var(--muted);padding:1px 6px;margin-right:5px;text-transform:uppercase}
+.key{border-left:6px solid var(--red);background:var(--card);padding:12px 16px;font-size:1.05rem}
+.key b{display:block;color:var(--red);font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:.85rem;margin-bottom:2px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:3px solid var(--ink);padding-top:14px}
+.nav .btn{min-width:96px;text-align:center}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;flex:1}
+.dots i{width:9px;height:9px;background:var(--rule);display:block}
+.dots i.on{background:var(--red)}
+.all .slide{border-top:1px solid var(--rule);padding-top:16px;min-height:0}
+.all .nav,.all .count{display:none}
 </style>
 </head>
 <body>
-<div class="wrap learn">
+<div class="wrap">
   <header>
     <div class="brand"><span class="sq"></span>Red Square Cafe Glenorchy</div>
     <h1>Menu Guide</h1>
-    <p class="muted">September 2026 menu. Everything the tests ask about is on this page.</p>
+    <p class="muted">September 2026 menu. Everything the tests ask about is in here.</p>
   </header>
-  <div class="who"><span>Read a section, have a practice run, then sit the test when you are ready.</span>
-    <span class="row"><a class="btn ghost small" href="index.html">My training</a></span></div>
-  <nav class="chips" aria-label="Sections">
-    <a href="#breakfast">Breakfast</a><a href="#lunch">Lunch, burgers, lighter</a><a href="#ingredients">Tricky ingredients</a>
-    <a href="#addons">Add-ons and pricing</a><a href="#dietary">Dietary and allergens</a><a href="#drinks">Drinks</a>
-  </nav>
 
-  <!-- BREAKFAST -->
-  <section id="breakfast">
-    <h2>Breakfast dishes</h2>
-    <div class="key"><b>Remember</b>All breakfast items are $16 before 11am. Upgrades and add-ons go on top. Not on public holidays.</div>
-    <div class="cards">
-      <div class="card"><h3>Canadian Breakfast <span>$25</span></h3><p>2 pancakes, 2 bacon rashers, scrambled eggs, hash brown, maple syrup.</p></div>
-      <div class="card"><h3>Mexican SMASH <span>$25</span></h3><p>Thick tortilla, smashed avocado, scrambled eggs, pico de gallo, herb oil, dukkah.</p><p class="tip"><span class="tag">V</span><span class="tag">Nuts</span><span class="tag">Seeds</span></p></div>
-      <div class="card"><h3>Apple Crumble French Toast <span>$23</span></h3><p>Warm apple, biscuit crumb, brioche in egg coating, cinnamon sugar, caramel, custard, ice cream, powdered sugar.</p><p class="tip"><span class="tag">No alt</span>Served as listed, no changes.</p></div>
-      <div class="card"><h3>Chilli SCRAM <span>$19.50</span></h3><p>Thick tortilla, scrambled eggs, hollandaise, fermented chilli oil, herb oil, dukkah. Heat is 5 out of 10.</p><p class="tip"><span class="tag">Nuts</span>Offer pulled pork for $6.</p></div>
-      <div class="card"><h3>Bacon &amp; Eggs <span>$18.50</span></h3><p>2 eggs your choice, 2 bacon rashers, sourdough toast.</p><p class="tip"><span class="tag">GFO</span><span class="tag">DFO</span></p></div>
-      <div class="card"><h3>Brekkie Burger <span>$17</span></h3><p>Burger bun, fried egg, bacon, hash brown, lettuce, cheese, BBQ sauce.</p><p class="tip">Add a sausage patty $3 or a beef patty $6.</p></div>
-      <div class="card"><h3>Eggs Benedict <span>$22</span></h3><p>2 poached eggs, sourdough toast, ham, hollandaise, herbed oil.</p><p class="tip"><span class="tag">GFO</span>Swap the ham for bacon $3 or smoked salmon $6.</p></div>
-      <div class="card"><h3>The BIG Breakfast <span>$26.50</span></h3><p>2 eggs your choice, sourdough toast, bacon, grilled tomato, breakfast sausage, hash brown, mushrooms.</p><p class="tip"><span class="tag">GFO</span><span class="tag">DFO</span>No baked beans. They are a $5 side.</p></div>
+  <!-- SECTION PICKER -->
+  <section id="home" class="stack" hidden>
+    <div class="who"><span>Pick a section and step through it. Then have a practice run before you sit the test.</span>
+      <a class="btn ghost small" href="index.html">My training</a></div>
+    <div id="tiles" class="tiles"></div>
+  </section>
+
+  <!-- SLIDES -->
+  <section id="deck" class="stack" hidden>
+    <div class="deckbar">
+      <span><span class="marker" id="deckName"></span></span>
+      <span class="row"><span class="count" id="count"></span>
+        <button class="btn ghost small" id="toggleAll" type="button">Show all on one page</button>
+        <a class="btn ghost small" href="#">All sections</a></span>
     </div>
-    <div class="key"><b>The two tortilla dishes</b>Both have thick tortilla, scrambled eggs, herb oil and dukkah. The SMASH adds avocado and pico de gallo. The SCRAM adds hollandaise and fermented chilli oil.</div>
-    <div class="key"><b>Big brekky swaps</b>Vegetarian: sausage and bacon out, collard greens, smashed avo and roast pumpkin in, no extra charge. Carnivore: tomato and mushrooms out, pulled pork, beef patty and sausage patty in, add $7.</div>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-breakfast">Practise this section</a><a class="btn small" href="glenorchy-menu.html#breakfast">Sit the test</a></div>
-  </section>
-
-  <!-- LUNCH -->
-  <section id="lunch">
-    <h2>Lunch, burgers and lighter options</h2>
-    <div class="key"><b>Remember</b>Chicken Parmy is $22 from 11am to 2pm, Monday to Friday. That covers the standard, Hawaiian and Mexican. Not on public holidays.</div>
-    <h3>Lunch</h3>
-    <div class="cards">
-      <div class="card"><h3>Fish &amp; Chips <span>2 piece $25, 3 piece $27.50</span></h3><p>Beer battered flathead, lemon wedge, tartare sauce, salad, chips.</p><p class="tip">The flathead is imported. The third piece is only $2.50 more.</p></div>
-      <div class="card"><h3>Caesar Salad <span>$22.50</span></h3><p>Cos lettuce, croutons, shaved parmesan, bacon, poached egg, dressing.</p><p class="tip"><span class="tag">GFO</span>No chicken as standard. Add warm chicken $5 or smoked salmon $6.50.</p></div>
-      <div class="card"><h3>Chicken &amp; Bacon Ranch Salad <span>$25</span></h3><p>Southern style chicken pieces, bacon, beetroot, corn, grated cheese, slaw, cos lettuce, ranch dressing.</p></div>
-      <div class="card"><h3>Lamb Gyro <span>$25</span></h3><p>2 medium thick style wraps, grilled marinated lamb, lettuce, salsa, tzatziki.</p><p class="tip"><span class="tag">No alt</span></p></div>
-      <div class="card"><h3>Chicken Gyro <span>$25</span></h3><p>2 medium thick style wraps, chicken breast, lettuce, lemon &amp; herb mayo.</p><p class="tip"><span class="tag">No alt</span></p></div>
-      <div class="card"><h3>Chicken Parmy <span>$26.50</span></h3><p>Chicken breast, panko crumb, lightly fried, Napoli sauce, ham, cheese. Served with chips and salad.</p><p class="tip">Hawaiian: Napoli sauce, ham, cheese, pineapple. Mexican: salsa, corn chips, cheese, sour cream, avocado. The Mexican is the only one with no Napoli sauce or ham.</p></div>
+    <div id="slides" class="stack" style="gap:18px"></div>
+    <div class="nav">
+      <button class="btn ghost" id="back" type="button">Back</button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="btn" id="next" type="button">Next</button>
     </div>
-    <h3>Burgers and sandwiches</h3>
-    <div class="cards">
-      <div class="card"><h3>Cheese &amp; Bacon Burger <span>$25</span></h3><p>Angus beef patty, bacon, American cheese, burger sauce, lettuce, burger bun. With chips.</p></div>
-      <div class="card"><h3>ANGUS Beef Burger with the LOT <span>$27.50</span></h3><p>Angus beef patty, egg, bacon, cheese, onion rings, mayo, beetroot, tomato, lettuce, burger bun. With chips.</p><p class="tip">No pineapple.</p></div>
-      <div class="card"><h3>Southern Fried Chicken Burger <span>$26</span></h3><p>Free range chicken breast, American cheese, mayo, slaw, burger bun. With chips.</p></div>
-      <div class="card"><h3>PATTY Melt <span>$20</span></h3><p>Smashed Angus beef patty, American cheese, onion jam, thick cut bread.</p><p class="tip">A toasted sandwich, not a burger. The menu does not list chips with it.</p></div>
-      <div class="card"><h3>BBQ Fried Chicken MEGA Toastie <span>$23.50</span></h3><p>Free range chicken breast, American cheese, BBQ sauce, pineapple, bacon, thick cut bread.</p><p class="tip">The menu does not list chips with it.</p></div>
-    </div>
-    <h3>Lighter options</h3>
-    <div class="scroll"><table>
-      <tr><th>Item</th><th>Price</th><th>What it is</th></tr>
-      <tr><td>Toast</td><td>$7</td><td>Sourdough, white, wholemeal or gluten free. Buttered, spreads available. V, GFO, DFO</td></tr>
-      <tr><td>Fruit Toast</td><td>$10</td><td>Thick cut, buttered, spreads available. V, DFO</td></tr>
-      <tr><td>Eggs on Toast</td><td>$15.50</td><td>Sourdough toast, 2 eggs your choice. V, GFO, DFO</td></tr>
-      <tr><td>Sweet Pancake</td><td>$15</td><td>2 pancakes, butter, maple syrup, vanilla ice cream, powdered sugar. V only</td></tr>
-      <tr><td>Spring Rolls</td><td>$13.50</td><td>3 HAKKA spring rolls with sweet chilli. V, DF</td></tr>
-      <tr><td>Nachos</td><td>$18.50</td><td>Corn chips, tomato salsa, grilled cheese, sour cream, avocado. No meat as standard, pulled pork is $6. V, GF</td></tr>
-      <tr><td>Nuggets</td><td>$15</td><td>Dinosaur chicken nuggets, chips, sauce</td></tr>
-      <tr><td>Chips</td><td>$11</td><td>Chips with tomato sauce. V, DF</td></tr>
-      <tr><td>Wedges</td><td>$15</td><td>Battered wedges, sour cream, sweet chilli sauce. V, DFO</td></tr>
-    </table></div>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-lunch">Practise this section</a><a class="btn small" href="glenorchy-menu.html#lunch">Sit the test</a></div>
-  </section>
-
-  <!-- INGREDIENTS -->
-  <section id="ingredients">
-    <h2>Tricky ingredients</h2>
-    <p>Customers ask what these are. Know what each one is, where it comes from, and which dish it is on.</p>
-    <div class="scroll"><table>
-      <tr><th>Ingredient</th><th>What it is</th><th>Where you find it</th></tr>
-      <tr><td>Pico de gallo</td><td>Fresh, uncooked Mexican salsa of chopped tomato, onion, coriander, chilli and lime</td><td>Mexican SMASH</td></tr>
-      <tr><td>Dukkah</td><td>Egyptian blend of crushed nuts, seeds and spices. A nut and seed allergy risk</td><td>Mexican SMASH, Chilli SCRAM</td></tr>
-      <tr><td>Hollandaise</td><td>French sauce of egg yolks, butter and lemon. Contains egg and dairy</td><td>Eggs Benedict, Chilli SCRAM, $3 condiment</td></tr>
-      <tr><td>Collard greens</td><td>Leafy green from the cabbage family, popular in the American South</td><td>$5 side, Vegetarian big brekky</td></tr>
-      <tr><td>Tzatziki</td><td>Greek sauce of yoghurt, cucumber and garlic. Contains dairy</td><td>Lamb Gyro</td></tr>
-      <tr><td>Gyro</td><td>Greek dish of meat in a flatbread wrap with salad and sauce</td><td>Lamb and Chicken Gyro</td></tr>
-      <tr><td>Napoli sauce</td><td>Italian style tomato sauce, named for Naples</td><td>Standard and Hawaiian parmy</td></tr>
-      <tr><td>Panko</td><td>Light, flaky Japanese style breadcrumb. Made from wheat, so it contains gluten</td><td>Chicken Parmy</td></tr>
-      <tr><td>Brioche</td><td>French bread enriched with butter and eggs, soft and slightly sweet</td><td>Apple Crumble French Toast</td></tr>
-      <tr><td>Cos lettuce</td><td>Crisp lettuce with long upright leaves, the classic Caesar lettuce</td><td>Caesar, Chicken &amp; Bacon Ranch Salad</td></tr>
-      <tr><td>Tartare sauce</td><td>Mayonnaise based sauce with chopped pickles and herbs. Contains egg</td><td>Fish &amp; Chips</td></tr>
-      <tr><td>Aioli</td><td>Garlic mayonnaise</td><td>$3 condiment</td></tr>
-      <tr><td>Worcestershire</td><td>Fermented English sauce. The traditional recipe contains anchovies, so check the label for vegetarians</td><td>Free condiment</td></tr>
-      <tr><td>Angus</td><td>A breed of beef cattle that originated in Scotland</td><td>Burgers, PATTY Melt</td></tr>
-      <tr><td>Onion jam</td><td>Onions cooked slowly until sweet and sticky</td><td>PATTY Melt</td></tr>
-      <tr><td>Sourdough</td><td>Bread raised with a natural starter. Still wheat bread, so it contains gluten</td><td>Most breakfasts</td></tr>
-      <tr><td>Maple syrup</td><td>Boiled down sap of maple trees, most famously from Canada</td><td>Canadian Breakfast, Sweet Pancake</td></tr>
-      <tr><td>American cheese</td><td>Mild processed cheese slice that melts smoothly</td><td>Burgers, PATTY Melt, MEGA Toastie</td></tr>
-    </table></div>
-    <div class="key"><b>Seafood country of origin</b>(A) Australian, (I) Imported, (M) Mixed origin. The flathead is imported. The smoked salmon is Australian.</div>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-ingredients">Practise this section</a><a class="btn small" href="glenorchy-menu.html#ingredients">Sit the test</a></div>
-  </section>
-
-  <!-- ADD-ONS -->
-  <section id="addons">
-    <h2>Add-ons and pricing policy</h2>
-    <div class="key"><b>The rule</b>No free swaps. Any substitute or addition is charged at its listed price, even when the item coming off costs the same.</div>
-    <h3>Sides and condiments</h3>
-    <div class="scroll"><table>
-      <tr><th>Price</th><th>Items</th></tr>
-      <tr><td>$5 sides</td><td>Mushroom, tomato, collard greens, baked beans, roast pumpkin</td></tr>
-      <tr><td>$6 sides</td><td>Bacon, sausage, pulled pork, avocado, hash browns</td></tr>
-      <tr><td>$7 side</td><td>Smoked salmon</td></tr>
-      <tr><td>$3 condiments</td><td>Hollandaise, sour cream, tomato relish, aioli, ranch, maple, gravy, extra butter</td></tr>
-      <tr><td>Free condiments</td><td>Tomato sauce, BBQ, sweet chilli, white vinegar, Worcestershire</td></tr>
-      <tr><td>Toast swaps</td><td>Croissant $5, gluten free toast (2 slices) $3</td></tr>
-    </table></div>
-    <p class="note">Easy to get wrong: tomato sauce is free, tomato relish is $3.</p>
-    <h3>Upgrades on dishes</h3>
-    <div class="scroll"><table>
-      <tr><th>Dish</th><th>Upgrade</th></tr>
-      <tr><td>Eggs Benedict</td><td>Swap ham for bacon $3 or smoked salmon $6</td></tr>
-      <tr><td>Brekkie Burger</td><td>Add sausage patty $3 or beef patty $6</td></tr>
-      <tr><td>Chilli SCRAM, Nachos</td><td>Add pulled pork $6</td></tr>
-      <tr><td>Caesar Salad</td><td>Add warm chicken $5 or smoked salmon $6.50</td></tr>
-      <tr><td>The BIG Breakfast</td><td>Vegetarian no extra charge, Carnivore add $7</td></tr>
-    </table></div>
-    <p class="note">Smoked salmon has three prices: $7 as a side, $6 as a Benedict swap, $6.50 on a Caesar.</p>
-    <h3>Specials and surcharges</h3>
-    <div class="scroll"><table>
-      <tr><th>What</th><th>How it works</th></tr>
-      <tr><td>Breakfast special</td><td>All breakfast items $16 before 11am. Upgrades and add-ons are charged on top</td></tr>
-      <tr><td>Parmy lunch special</td><td>Any parmy $22, 11am to 2pm, Monday to Friday</td></tr>
-      <tr><td>Public holidays</td><td>10% surcharge, and neither special runs</td></tr>
-      <tr><td>Cabinet items</td><td>Cakes, slices, toasties and wraps are ready to go, so they may come out at a different time to dine-in meals. Tell the table when they order</td></tr>
-    </table></div>
-    <h3>Worked examples</h3>
-    <ul>
-      <li>Carnivore big brekky at 9am on a weekday: $16 + $7 = <b>$23</b>. At midday: $26.50 + $7 = <b>$33.50</b>.</li>
-      <li>Eggs Benedict with smoked salmon at 10am: $16 + $6 = <b>$22</b>. After 11am: $22 + $6 = <b>$28</b>.</li>
-      <li>Chilli SCRAM with pulled pork at 8:30am: $16 + $6 = <b>$22</b>.</li>
-      <li>Bacon &amp; Eggs at 11:20am: the special has ended, so <b>$18.50</b>.</li>
-      <li>Chicken Parmy at 12:30pm on a Saturday: the special is weekdays only, so <b>$26.50</b>.</li>
-      <li>2 piece Fish &amp; Chips on a public holiday: $25 + 10% = <b>$27.50</b>.</li>
-      <li>Swap mushrooms for avocado on a BIG Breakfast: the avocado is a <b>$6</b> side. No free swaps.</li>
-    </ul>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-addons">Practise this section</a><a class="btn small" href="glenorchy-menu.html#addons">Sit the test</a></div>
-  </section>
-
-  <!-- DIETARY -->
-  <section id="dietary">
-    <h2>Dietary and allergens</h2>
-    <div class="key"><b>Severe allergies</b>The kitchen uses shared equipment, so traces of meat, seafood, dairy, gluten, nuts and other allergens may be present. Never promise a dish is allergen free. Always tell the kitchen about an allergy.</div>
-    <div class="scroll"><table>
-      <tr><th>Code</th><th>Meaning</th></tr>
-      <tr><td>V</td><td>Vegetarian</td></tr>
-      <tr><td>G or GF</td><td>Gluten free as served</td></tr>
-      <tr><td>DF</td><td>Dairy free as served</td></tr>
-      <tr><td>GFO</td><td>A gluten free option is available on request. Not gluten free as listed</td></tr>
-      <tr><td>DFO</td><td>A dairy free option is available on request</td></tr>
-      <tr><td>NO ALT</td><td>No alterations. Served as listed, with no changes or dietary alternative</td></tr>
-      <tr><td>NUTS, SEEDS</td><td>Contains nuts or seeds</td></tr>
-    </table></div>
-    <ul>
-      <li><b>Nuts:</b> the Mexican SMASH and Chilli SCRAM both carry a nuts warning because of the dukkah.</li>
-      <li><b>NO ALT dishes:</b> Apple Crumble French Toast, Lamb Gyro and Chicken Gyro.</li>
-      <li><b>Coeliac wanting Eggs Benedict:</b> it is GFO. Gluten free toast is a $3 swap, and you tell the kitchen.</li>
-      <li><b>Dairy free and Eggs Benedict:</b> hollandaise is made with butter, and the dish is not marked DFO.</li>
-      <li><b>Vegetarian and dairy free lighter options:</b> Spring Rolls and Chips. Wedges are DFO because of the sour cream.</li>
-      <li><b>Nachos:</b> vegetarian and gluten free, but not dairy free.</li>
-      <li><b>Sweet Pancake:</b> vegetarian only. No gluten free or dairy free option.</li>
-      <li><b>Vegan drink:</b> the Mont Blanc.</li>
-      <li><b>Tree nut allergy:</b> the Coconut Cold Brew Latte contains almond milk syrup.</li>
-    </ul>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-dietary">Practise this section</a><a class="btn small" href="glenorchy-menu.html#dietary">Sit the test</a></div>
-  </section>
-
-  <!-- DRINKS -->
-  <section id="drinks">
-    <h2>Drinks</h2>
-    <div class="scroll"><table>
-      <tr><th>Drink</th><th>Price</th><th>Details</th></tr>
-      <tr><td>Coffee, hot choc, chai</td><td>$5.30 / $5.80 / $6.50</td><td>Small, medium, large</td></tr>
-      <tr><td>Iced latte or long black</td><td>$6</td><td></td></tr>
-      <tr><td>Sticky chai</td><td>$6</td><td>Chai is Indian spiced tea, usually black tea with cinnamon, cardamom, ginger and clove</td></tr>
-      <tr><td>Tea Drop tea</td><td>$5</td><td>Pot for one: English breakfast, earl grey, gunpowder green, ginger &amp; lemongrass, peppermint</td></tr>
-      <tr><td>Mont Blanc</td><td>$8.50</td><td>Espresso, brown sugar syrup, layered soy and plant cream, orange zest, over ice. Vegan</td></tr>
-      <tr><td>Salted Honey Iced Latte</td><td>$7</td><td>Espresso, milk, honey and a touch of sea salt, over ice</td></tr>
-      <tr><td>Coconut Cold Brew Latte</td><td>$8</td><td>24 hour cold brew coffee, coconut cream and almond milk syrup, over ice</td></tr>
-      <tr><td>Soft-serve Affogato</td><td>$7.50</td><td>A shot of espresso poured over soft-serve ice cream. Affogato is Italian</td></tr>
-      <tr><td>Milkshakes</td><td>$7.50</td><td>Thick shakes $8.50. Chocolate, strawberry, vanilla, caramel, lime, banana, spearmint, blue heaven, coffee, mocha, chai</td></tr>
-      <tr><td>Iced choc, coffee, mocha</td><td>$9</td><td></td></tr>
-      <tr><td>Frappes</td><td>$8</td><td>Coffee, mocha, chocolate, caramel</td></tr>
-      <tr><td>Soft drinks</td><td>$5</td><td>Pepsi, Pepsi Max, Solo, ginger beer, lemonade, orange &amp; mango, lemon lime &amp; bitters, blood orange, mineral water. We stock Pepsi, not Coke</td></tr>
-      <tr><td>Juice</td><td>$5.50</td><td>Orange, apple, pineapple</td></tr>
-    </table></div>
-    <h3>Ultrashakes, $10 each</h3>
-    <div class="scroll"><table>
-      <tr><th>Shake</th><th>What goes in</th></tr>
-      <tr><td>Turkish Delight</td><td>Rosewater syrup, grated chocolate, raspberry coulis, whipped cream, Turkish delight</td></tr>
-      <tr><td>Biscoff Deluxe</td><td>Biscoff sauce, crushed Biscoff, whipped cream, Biscoff drizzle, a Biscoff cookie. Biscoff is a Belgian caramelised spiced biscuit and contains gluten</td></tr>
-      <tr><td>Honeycomb Crunch</td><td>Honeycomb syrup, chocolate, crushed honeycomb, whipped cream</td></tr>
-      <tr><td>Cookies &amp; Cream</td><td>Chocolate, crushed Oreos, whipped cream, an Oreo cookie</td></tr>
-      <tr><td>White Chocolate &amp; Raspberry</td><td>White chocolate, raspberry coulis, whipped cream, raspberry lollies</td></tr>
-      <tr><td>Peppermint Choc Chip</td><td>Spearmint syrup, grated chocolate, whipped cream, peppermint candy</td></tr>
-    </table></div>
-    <h3>Smoothies</h3>
-    <div class="scroll"><table>
-      <tr><th>Smoothie</th><th>Price</th><th>What goes in</th></tr>
-      <tr><td>Mango Pash</td><td>$9</td><td>Mango, passionfruit, banana, vanilla yoghurt</td></tr>
-      <tr><td>Red Square Berry Blast</td><td>$9</td><td>Strawberry, raspberry, blueberry, vanilla yoghurt</td></tr>
-      <tr><td>Green Machine</td><td>$8.50</td><td>Spinach, cucumber, banana. The only one with no yoghurt</td></tr>
-    </table></div>
-    <p class="note">Gunpowder green is a Chinese green tea with the leaves rolled into small pellets. It is not smoky or spicy. Coulis is a smooth fruit sauce.</p>
-    <div class="row"><a class="btn small ghost" href="glenorchy-menu.html#practice-drinks">Practise this section</a><a class="btn small" href="glenorchy-menu.html#drinks">Sit the test</a></div>
   </section>
 </div>
+
+<script src="glenorchy-menu.guide.js?v=20261115j"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  var sec = null, at = 0, showAll = false;
+
+  function find(id){ for(var i=0;i<GUIDE.length;i++) if(GUIDE[i].id === id) return GUIDE[i]; return null; }
+
+  function card(c){
+    var d = el("div", "card"), h = el("h3", null, c.t);
+    if(c.p) h.appendChild(el("span", null, c.p));
+    d.appendChild(h);
+    if(c.d) d.appendChild(el("p", null, c.d));
+    if((c.tags && c.tags.length) || c.tip){
+      var t = el("p", "tip");
+      (c.tags || []).forEach(function(x){ t.appendChild(el("span", "tag", x)); });
+      if(c.tip) t.appendChild(document.createTextNode(c.tip));
+      d.appendChild(t);
+    }
+    return d;
+  }
+
+  function slide(s){
+    var d = el("div", "slide"), cards = s.cards || [];
+    // A single dish is its own heading, so only show a slide heading when it adds something.
+    if(!(cards.length === 1 && cards[0].t === s.h)) d.appendChild(el("h2", null, s.h));
+    if(cards.length){
+      var g = el("div", "cards " + (cards.length === 1 ? "solo" : (cards.length === 2 ? "c2" : "c3")));
+      cards.forEach(function(c){ g.appendChild(card(c)); });
+      d.appendChild(g);
+    }
+    if(s.key){ var k = el("div", "key"); k.appendChild(el("b", null, s.key[0])); k.appendChild(document.createTextNode(s.key[1])); d.appendChild(k); }
+    return d;
+  }
+
+  function endSlide(){
+    var d = el("div", "slide"), nextSec = GUIDE[GUIDE.indexOf(sec) + 1];
+    d.appendChild(el("h2", null, "That is " + sec.name.toLowerCase() + " done"));
+    d.appendChild(el("p", null, "Have a practice run. It is the same questions as the test, and nothing is saved."));
+    var r = el("div", "row");
+    var p = el("a", "btn", "Practise this section"); p.href = "glenorchy-menu.html#practice-" + sec.id; r.appendChild(p);
+    var t = el("a", "btn ghost", "Sit the test"); t.href = "glenorchy-menu.html#" + sec.id; r.appendChild(t);
+    if(nextSec){ var n = el("a", "btn ghost", "Next: " + nextSec.name); n.href = "#" + nextSec.id; r.appendChild(n); }
+    d.appendChild(r);
+    return d;
+  }
+
+  function total(){ return sec.slides.length + 1; }
+
+  function render(){
+    var box = $("slides"); box.innerHTML = "";
+    $("deck").classList.toggle("all", showAll);
+    $("toggleAll").textContent = showAll ? "Show as slides" : "Show all on one page";
+    if(showAll){ sec.slides.forEach(function(s){ box.appendChild(slide(s)); }); box.appendChild(endSlide()); return; }
+    box.appendChild(at < sec.slides.length ? slide(sec.slides[at]) : endSlide());
+    $("count").textContent = (at + 1) + " of " + total();
+    $("back").disabled = at === 0;
+    $("next").style.visibility = at === total() - 1 ? "hidden" : "visible";
+    var dots = $("dots"); dots.innerHTML = "";
+    for(var i=0;i<total();i++) dots.appendChild(el("i", i <= at ? "on" : ""));
+  }
+
+  function go(n){ at = Math.max(0, Math.min(total() - 1, n)); render(); window.scrollTo(0, 0); }
+
+  function open(id){
+    sec = find(id);
+    if(!sec){ $("home").hidden = false; $("deck").hidden = true; window.scrollTo(0, 0); return; }
+    at = 0; showAll = false;
+    $("deckName").textContent = sec.name;
+    $("home").hidden = true; $("deck").hidden = false;
+    render(); window.scrollTo(0, 0);
+  }
+
+  // section picker
+  GUIDE.forEach(function(s){
+    var a = el("a", "sec"); a.href = "#" + s.id;
+    var l = el("span"); l.appendChild(el("b", null, s.name));
+    l.appendChild(el("small", null, s.slides.slice(1, 4).map(function(x){ return x.h; }).join(", ") + " and more"));
+    a.appendChild(l); a.appendChild(el("span", "n", s.slides.length + " slides")); $("tiles").appendChild(a);
+  });
+
+  $("next").addEventListener("click", function(){ go(at + 1); });
+  $("back").addEventListener("click", function(){ go(at - 1); });
+  $("toggleAll").addEventListener("click", function(){ showAll = !showAll; render(); });
+  document.addEventListener("keydown", function(e){
+    if($("deck").hidden || showAll) return;
+    if(e.key === "ArrowRight") go(at + 1); else if(e.key === "ArrowLeft") go(at - 1);
+  });
+  // swipe left and right on a phone
+  var sx = null, sy = null;
+  $("slides").addEventListener("touchstart", function(e){ sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+  $("slides").addEventListener("touchend", function(e){
+    if(sx === null || showAll) return;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(at + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  function route(){ open(location.hash.replace("#", "")); }
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
 </body>
 </html>

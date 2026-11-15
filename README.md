@@ -8,7 +8,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 
 - `index.html` sign-in, My training, and the manager crew view
 - `glenorchy-menu.html` + `glenorchy-menu.questions.js` the Glenorchy menu test (September 2026 menu)
-- `glenorchy-menu-learn.html` the Glenorchy menu guide to read before the test
+- `glenorchy-menu-learn.html` + `glenorchy-menu.guide.js` the Glenorchy menu guide, a slideshow per section to step through before the test
 - `common.js`, `common.css` shared sign-in session and styling
 - `config.js` the address of the Apps Script web app
 - `apps-script/Code.gs` the backend. It lives in the "Staff Training Log" Apps Script project (redsquarecafe80 Google account) and reads and writes the "Staff Training Log" spreadsheet
@@ -43,7 +43,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 
 ## When the menu changes
 
-1. Update the questions for the affected sections (`glenorchy-menu.questions.js`) and the menu label on the test page.
+1. Update the questions (`glenorchy-menu.questions.js`), the guide slides (`glenorchy-menu.guide.js`) and the menu label on both pages.
 2. In the Tests tab, set **Assigned** for those sections to the changeover date.
 
 Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days. Old attempts stay in each person's history, and the Monday emails list them as a menu change re-sit.
