@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115e">
+<link rel="stylesheet" href="common.css?v=20261115f">
 </head>
 <body>
 <div class="wrap">
@@ -94,8 +94,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115e"></script>
-<script src="common.js?v=20261115e"></script>
+<script src="config.js?v=20261115f"></script>
+<script src="common.js?v=20261115f"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -156,6 +156,7 @@
     if(t.state === "refresh") return "Last passed " + T.fmtDate(t.passedOn) + ". Refresher due by " + T.fmtDate(t.due);
     var last = t.tries ? "Last try " + t.latestPct + "% on " + T.fmtDate(t.latestWhen) + ". " : "";
     if(!t.due) return last + "Optional for you";
+    if(t.menuChanged) last = "The menu has changed, so this needs a re-sit. " + last;
     if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
     return last + "Due " + T.fmtDate(t.due);
   }

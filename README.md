@@ -28,4 +28,12 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 - Owners can sit any test to try or demo it, but nothing is required of them and they do not appear in crew lists or get reminders.
 - A pass lasts 6 months, then a refresher is due within 14 days. Change the months per test in the Tests tab (0 = never).
 - Anyone with an Email in the Staff tab is emailed their result after each attempt, and at most one reminder a week (Monday 8am) while they have a test overdue, failed, up for a refresher, or due within 7 days.
-- Managers with an Email also get a Monday follow-up list. The Monday run is switched on by running `installWeeklyEmail` once in the Apps Script editor.
+- Managers and owners with an Email get a Monday summary of their crew: who needs a follow up, who is ready to re-test, results from the last 7 days, and where everyone is at. A week with nothing to report sends nothing.
+- The Monday run is switched on by running `installWeeklyEmail` once in the Apps Script editor.
+
+## When the menu changes
+
+1. Update the questions for the affected sections (`glenorchy-menu.questions.js`) and the menu label on the test page.
+2. In the Tests tab, set **Assigned** for those sections to the changeover date.
+
+Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days. Old attempts stay in each person's history, and the Monday emails list them as a menu change re-sit.

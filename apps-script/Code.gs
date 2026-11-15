@@ -12,7 +12,10 @@
  *   Settings  the email on/off switch.
  *
  * Emails are OFF until the Settings tab says "Emails on | Yes". Once on, each person with an email in the Staff tab gets their result after every attempt, and at most one
- * reminder a week (Monday) while they have a test to do. Managers also get a Monday follow-up list.
+ * reminder a week (Monday) while they have a test to do. Managers and owners get a Monday summary of their crew.
+ *
+ * Menu change: update the questions, then set the test's Assigned date in the Tests tab to the changeover date.
+ * Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days.
  *
  * Nobody sees anything without signing in. Crew see their own results only.
  * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone, and can sit any test to try it, but nothing is required of them.
@@ -242,7 +245,13 @@ function status_(staff, data, now) {
   return data.tests.filter(function (t) {
     return t.required && (owner || t.venue === 'all' || staff.venues.indexOf('all') !== -1 || staff.venues.indexOf(t.venue) !== -1);
   }).map(function (t) {
-    const at = mine.filter(function (a) { return a.key === t.key; });
+    // When the menu changes, the Assigned date is moved forward. Only attempts since then count,
+    // so everyone re-sits on the new menu. Older attempts stay in their history.
+    const all = mine.filter(function (a) { return a.key === t.key; });
+    const since = t.assigned ? t.assigned.getTime() : 0;
+    const at = all.filter(function (a) { return a.when.getTime() >= since; });
+    const menuChanged = !owner && all.some(function (a) { return a.when.getTime() < since && a.pct >= PASS_MARK; }) &&
+      !at.some(function (a) { return a.pct >= PASS_MARK; });
     const passes = at.filter(function (a) { return a.pct >= PASS_MARK; });
     const latest = at.length ? at[at.length - 1] : null;
     const lastPass = passes.length ? passes[passes.length - 1] : null;
@@ -261,6 +270,7 @@ function status_(staff, data, now) {
         : (passed ? 'passed' : (now.getTime() > due.getTime() ? 'overdue' : (needsRefresh ? 'refresh' : (latest ? 'retest' : 'todo')))),
       due: owner ? null : due.toISOString(),
       optional: owner,
+      menuChanged: menuChanged,
       passedOn: lastPass ? lastPass.when.toISOString() : null,
       refreshOn: refreshFrom ? refreshFrom.toISOString() : null,
       best: at.length ? Math.max.apply(null, at.map(function (a) { return a.pct; })) : null,
@@ -296,77 +306,202 @@ function profile_(s) { return { name: s.name, venue: s.venueText, role: s.role }
 
 const SIGN_OFF = 'Adrian, Mic and the Red Square Crew';
 const OWN_TIME = 'at work or in your own time, whichever suits you';
-
-// Sent to the person straight after each attempt, if they have an email in the Staff tab.
-function emailResult_(staff, req, right, total, pct) {
-  if (!staff.email || !emailsOn_()) return;
-  const title = clean_(req.test, 60) + ': ' + clean_(req.section, 80);
-  const review = (Array.isArray(req.review) ? req.review : []).slice(0, 40).map(function (m) {
-    return '- ' + clean_(m && m.q, 300) + '\n  Answer: ' + clean_(m && m.a, 300);
-  });
-  MailApp.sendEmail(staff.email, 'Your result: ' + title + ' ' + pct + '%',
-    'Hi ' + first_(staff) + ',\n\nYou scored ' + right + ' out of ' + total + ' (' + pct + '%) on ' + title + '. ' +
-    (pct >= PASS_MARK ? 'That is a pass.' : 'The pass mark is ' + PASS_MARK + '%, so this one needs another go.') +
-    (review.length ? '\n\nThe ones you missed:\n\n' + review.join('\n\n') : '\n\nYou did not miss a single question.') +
-    '\n\nYou can sit it again any time, ' + OWN_TIME + ':\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n');
-}
-
-// Runs every Monday morning. Managers get their follow-up list, and anyone with a test
-// to do gets one reminder. Nobody gets more than one reminder a week.
-function weeklyDigest() {
-  if (!emailsOn_()) return;
-  const data = load_();
-  const now = new Date();
-  managerDigest_(data, now);
-  staffReminders_(data, now);
-}
-
-function managerDigest_(data, now) {
-  data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
-    const lines = [];
-    crewOf_(m, data).forEach(function (s) {
-      const f = flags_(status_(s, data, now));
-      if (f.behind.length) lines.push(s.name + ' is behind on ' + f.behind.length + ' of ' + f.required + ' tests: ' + f.behind.join(', '));
-      f.poor.forEach(function (p) {
-        lines.push(s.name + ' scored ' + p.pct + '% on ' + p.title + (p.failsInRow > 1 ? ' (' + p.failsInRow + ' fails in a row)' : ''));
-      });
-    });
-    if (!lines.length) return;
-    MailApp.sendEmail(m.email, 'Staff training: ' + lines.length + ' to follow up',
-      'Hi ' + first_(m) + ',\n\nThese need a follow up this week:\n\n- ' + lines.join('\n- ') +
-      '\n\nThe pass mark is ' + PASS_MARK + '% and each test is due ' + DUE_DAYS + ' days after it is assigned.\n\nCrew view: ' + SITE_URL + '\n');
-  });
-}
-
-function staffReminders_(data, now) {
-  data.staff.filter(function (s) { return s.email && s.role !== 'Owner'; }).forEach(function (s) {
-    const lines = reminderLines_(status_(s, data, now), now);
-    if (!lines.length) return;
-    MailApp.sendEmail(s.email, 'Menu training: ' + lines.length + (lines.length === 1 ? ' test' : ' tests') + ' to do',
-      'Hi ' + first_(s) + ',\n\nHere is where your training is at:\n\n- ' + lines.join('\n- ') +
-      '\n\nYou can do these ' + OWN_TIME + '. Sign in here:\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n');
-  });
-}
-
-// Tests worth a nudge: overdue, a failed last try, a refresher that has come up, or due within the week.
-function reminderLines_(tests, now) {
-  const soon = now.getTime() + REMIND_WITHIN_DAYS * 86400000;
-  const out = [];
-  tests.forEach(function (t) {
-    const due = new Date(t.due);
-    if (t.state === 'overdue') out.push(t.title + ': was due ' + day_(due));
-    else if (t.state === 'refresh') out.push(t.title + ': refresher due by ' + day_(due) + ' (last passed ' + day_(new Date(t.passedOn)) + ')');
-    else if (t.state === 'retest') out.push(t.title + ': last try ' + t.latestPct + '%, needs a re-test by ' + day_(due));
-    else if (t.state === 'todo' && due.getTime() <= soon) out.push(t.title + ': due ' + day_(due));
-  });
-  return out;
-}
+const SUMMARY_DAYS = 7; // the weekly summary covers results from the last 7 days
+const INK = '#151515', PAPER = '#f4f2ec', MUTED = '#5d5b57', RULE = '#d9d6cf', RED = '#c8201f', HI = '#ffe14a';
+const TONES = { good: '#1d7a45', bad: '#b3261e', warn: '#8a5a00', plain: '#5d5b57' };
+const FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;";
 
 // The master switch: no email of any kind is sent unless the Settings tab says "Emails on | Yes".
 function emailsOn_() {
   return readTab_('Settings').some(function (r) { return norm_(r[0]) === 'emails on' && /^y/i.test(String(r[1]).trim()); });
 }
 
+function send_(to, subject, text, html) {
+  MailApp.sendEmail({ to: to, subject: subject, body: text, htmlBody: html, name: 'Red Square Training' });
+}
+
+/* -- building blocks for the HTML emails (tables and inline styles, so every mail app shows them the same) -- */
+
+function esc_(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function pill_(text, tone) {
+  const c = TONES[tone] || TONES.plain;
+  return '<span style="display:inline-block;border:2px solid ' + c + ';color:' + c + ';font-size:11px;font-weight:700;letter-spacing:.06em;' +
+    'text-transform:uppercase;padding:2px 7px;white-space:nowrap;">' + esc_(text) + '</span>';
+}
+
+function shell_(heading, inner, buttonText) {
+  return '<div style="margin:0;padding:24px 12px;background:' + PAPER + ';' + FONT + 'color:' + INK + ';">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border:2px solid ' + INK + ';">' +
+    '<tr><td style="padding:22px 24px 14px;border-bottom:3px solid ' + INK + ';">' +
+    '<div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;">' +
+    '<span style="display:inline-block;width:11px;height:11px;background:' + RED + ';margin-right:8px;"></span>Red Square Cafe</div>' +
+    '<div style="font-size:26px;font-weight:900;line-height:1.15;margin-top:6px;">' + esc_(heading) + '</div></td></tr>' +
+    '<tr><td style="padding:20px 24px 8px;font-size:15px;line-height:1.5;">' + inner + '</td></tr>' +
+    '<tr><td style="padding:8px 24px 24px;"><a href="' + SITE_URL + '" style="display:inline-block;background:' + INK + ';color:#ffffff;' +
+    'text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;">' + esc_(buttonText) + '</a></td></tr>' +
+    '<tr><td style="padding:14px 24px;border-top:1px solid ' + RULE + ';font-size:13px;color:' + MUTED + ';">' + esc_(SIGN_OFF) + '</td></tr>' +
+    '</table></div>';
+}
+
+function section_(title, rowsHtml) {
+  return '<div style="margin:18px 0 6px;"><span style="background:' + HI + ';color:' + INK + ';font-weight:900;font-size:14px;letter-spacing:.04em;' +
+    'text-transform:uppercase;padding:3px 8px;">' + esc_(title) + '</span></div>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" width="100%">' + rowsHtml + '</table>';
+}
+
+// One line in a list: bold lead, lighter detail underneath, an optional status pill on the right.
+function line_(lead, detail, pillHtml) {
+  return '<tr><td style="padding:9px 0;border-bottom:1px solid ' + RULE + ';font-size:15px;line-height:1.4;">' +
+    '<div style="font-weight:700;">' + esc_(lead) + '</div>' + (detail ? '<div style="color:' + MUTED + ';font-size:14px;">' + esc_(detail) + '</div>' : '') + '</td>' +
+    '<td align="right" valign="top" style="padding:9px 0 9px 10px;border-bottom:1px solid ' + RULE + ';">' + (pillHtml || '') + '</td></tr>';
+}
+
+function p_(html) { return '<p style="margin:0 0 12px;">' + html + '</p>'; }
+
+/* -- the three emails -- */
+
+// To the person, straight after each attempt.
+function emailResult_(staff, req, right, total, pct) {
+  if (!staff.email || !emailsOn_()) return;
+  const title = clean_(req.test, 60) + ': ' + clean_(req.section, 80);
+  const pass = pct >= PASS_MARK;
+  const review = (Array.isArray(req.review) ? req.review : []).slice(0, 40).map(function (m) {
+    return { q: clean_(m && m.q, 300), a: clean_(m && m.a, 300) };
+  });
+  const verdict = pass ? 'That is a pass.' : 'The pass mark is ' + PASS_MARK + '%, so this one needs another go.';
+
+  const text = 'Hi ' + first_(staff) + ',\n\nYou scored ' + right + ' out of ' + total + ' (' + pct + '%) on ' + title + '. ' + verdict +
+    (review.length ? '\n\nThe ones you missed:\n\n' + review.map(function (m) { return '- ' + m.q + '\n  Answer: ' + m.a; }).join('\n\n')
+      : '\n\nYou did not miss a single question.') +
+    '\n\nYou can sit it again any time, ' + OWN_TIME + ':\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n';
+
+  const html = shell_('Your result',
+    p_('Hi ' + esc_(first_(staff)) + ',') +
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 10px;"><tr>' +
+    '<td style="font-size:56px;font-weight:900;line-height:1;">' + pct + '%</td>' +
+    '<td style="padding-left:14px;">' + pill_(pass ? 'Pass' : 'Re-test needed', pass ? 'good' : 'bad') + '</td></tr></table>' +
+    p_('<b>' + right + ' of ' + total + '</b> correct on <b>' + esc_(title) + '</b>. ' + esc_(verdict)) +
+    (review.length ? section_('The ones you missed', review.map(function (m) {
+      return '<tr><td style="padding:10px 0;border-bottom:1px solid ' + RULE + ';font-size:15px;line-height:1.4;"><div style="font-weight:700;">' + esc_(m.q) +
+        '</div><div style="color:' + TONES.good + ';">' + esc_(m.a) + '</div></td></tr>';
+    }).join('')) : p_('You did not miss a single question.')) +
+    '<p style="margin:16px 0 4px;color:' + MUTED + ';font-size:14px;">You can sit it again any time, ' + OWN_TIME + '.</p>',
+    'Sit it again');
+  send_(staff.email, 'Your result: ' + title + ' ' + pct + '%', text, html);
+}
+
+// Runs every Monday morning. Managers and owners get a summary of their crew, and anyone
+// with a test to do gets one reminder. Nobody gets more than one of each a week.
+function weeklyDigest() {
+  if (!emailsOn_()) return;
+  const data = load_();
+  const now = new Date();
+  weeklySummary_(data, now);
+  staffReminders_(data, now);
+}
+
+// What a manager or owner needs to know about their crew this week.
+function summaryFor_(viewer, data, now) {
+  const from = now.getTime() - SUMMARY_DAYS * 86400000;
+  const out = { follow: [], retest: [], results: [], progress: [] };
+  crewOf_(viewer, data).forEach(function (s) {
+    const tests = status_(s, data, now);
+    const f = flags_(tests);
+    if (f.behind.length) out.follow.push({ lead: s.name, detail: 'Behind on ' + f.behind.length + ' of ' + f.required + ': ' + shortTitles_(f.behind), label: 'Behind', tone: 'bad' });
+    f.poor.forEach(function (p) {
+      out.follow.push({ lead: s.name, detail: p.pct + '% on ' + shortTitle_(p.title) + (p.failsInRow > 1 ? ', ' + p.failsInRow + ' fails in a row' : ''), label: 'Low score', tone: 'warn' });
+    });
+    const refresh = tests.filter(function (t) { return t.state === 'refresh' || (t.state === 'overdue' && t.refreshOn && new Date(t.refreshOn) <= now); });
+    const changed = tests.filter(function (t) { return t.menuChanged; });
+    if (refresh.length) out.retest.push({ lead: s.name, detail: 'Refresher due: ' + shortTitles_(refresh.map(function (t) { return t.title; })), label: 'Refresher', tone: 'warn' });
+    if (changed.length) out.retest.push({ lead: s.name, detail: 'Menu changed, re-sit: ' + shortTitles_(changed.map(function (t) { return t.title; })), label: 'Menu change', tone: 'warn' });
+    data.attempts.filter(function (a) { return norm_(a.name) === s.key && a.when.getTime() >= from; }).forEach(function (a) {
+      out.results.push({ lead: s.name, detail: a.test + ': ' + a.section + ', ' + day_(a.when), label: a.pct + '%', tone: a.pct >= PASS_MARK ? 'good' : 'bad' });
+    });
+    out.progress.push({ lead: s.name, detail: f.passed + ' of ' + f.required + ' passed',
+      label: f.behind.length ? 'Behind' : (f.poor.length ? 'Needs help' : (f.required && f.passed === f.required ? 'Complete' : 'On track')),
+      tone: f.behind.length ? 'bad' : (f.poor.length ? 'warn' : (f.required && f.passed === f.required ? 'good' : 'plain')) });
+  });
+  return out;
+}
+
+function weeklySummary_(data, now) {
+  data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
+    const sum = summaryFor_(m, data, now);
+    if (!sum.progress.length) return;
+    if (!sum.follow.length && !sum.retest.length && !sum.results.length) return; // a quiet week sends nothing
+    const mail = summaryEmail_(m, sum);
+    send_(m.email, mail.subject, mail.text, mail.html);
+  });
+}
+
+function summaryEmail_(m, sum) {
+  const rows = function (list) { return list.map(function (x) { return line_(x.lead, x.detail, pill_(x.label, x.tone)); }).join(''); };
+  const textRows = function (list) { return list.map(function (x) { return '- ' + x.lead + ': ' + x.detail + ' [' + x.label + ']'; }).join('\n'); };
+  const counts = [];
+  if (sum.follow.length) counts.push(sum.follow.length + ' to follow up');
+  if (sum.retest.length) counts.push(sum.retest.length + ' ready to re-test');
+  if (sum.results.length) counts.push(sum.results.length + (sum.results.length === 1 ? ' result' : ' results') + ' this week');
+  const where = m.role === 'Owner' ? 'all venues' : m.venueText;
+
+  const html = shell_('Crew training summary',
+    p_('Hi ' + esc_(first_(m)) + ', here is the week for <b>' + esc_(where) + '</b>: ' + esc_(counts.join(', ')) + '.') +
+    (sum.follow.length ? section_('Needs a follow up', rows(sum.follow)) : '') +
+    (sum.retest.length ? section_('Ready to re-test', rows(sum.retest)) : '') +
+    (sum.results.length ? section_('Results this week', rows(sum.results)) : '') +
+    section_('Where everyone is at', rows(sum.progress)) +
+    '<p style="margin:16px 0 4px;color:' + MUTED + ';font-size:14px;">Pass mark ' + PASS_MARK + '%. Each test is due ' + DUE_DAYS + ' days after it is assigned.</p>',
+    'Open the crew view');
+
+  const text = 'Hi ' + first_(m) + ',\n\nCrew training summary for ' + where + ': ' + counts.join(', ') + '.\n' +
+    (sum.follow.length ? '\nNEEDS A FOLLOW UP\n' + textRows(sum.follow) + '\n' : '') +
+    (sum.retest.length ? '\nREADY TO RE-TEST\n' + textRows(sum.retest) + '\n' : '') +
+    (sum.results.length ? '\nRESULTS THIS WEEK\n' + textRows(sum.results) + '\n' : '') +
+    '\nWHERE EVERYONE IS AT\n' + textRows(sum.progress) + '\n\nCrew view: ' + SITE_URL + '\n\n' + SIGN_OFF + '\n';
+  return { subject: 'Crew training: ' + counts.join(', '), text: text, html: html };
+}
+
+function staffReminders_(data, now) {
+  data.staff.filter(function (s) { return s.email && s.role !== 'Owner'; }).forEach(function (s) {
+    const items = reminderItems_(status_(s, data, now), now);
+    if (!items.length) return;
+    const mail = reminderEmail_(s, items);
+    send_(s.email, mail.subject, mail.text, mail.html);
+  });
+}
+
+function reminderEmail_(s, items) {
+  const html = shell_('Your menu training',
+    p_('Hi ' + esc_(first_(s)) + ', here is where your training is at.') +
+    section_(items.length === 1 ? '1 test to do' : items.length + ' tests to do',
+      items.map(function (x) { return line_(x.lead, x.detail, pill_(x.label, x.tone)); }).join('')) +
+    '<p style="margin:16px 0 4px;color:' + MUTED + ';font-size:14px;">You can do these ' + OWN_TIME + '.</p>',
+    'Go to my training');
+  const text = 'Hi ' + first_(s) + ',\n\nHere is where your training is at:\n\n' +
+    items.map(function (x) { return '- ' + x.lead + ': ' + x.detail; }).join('\n') +
+    '\n\nYou can do these ' + OWN_TIME + '. Sign in here:\n' + SITE_URL + '\n\n' + SIGN_OFF + '\n';
+  return { subject: 'Menu training: ' + items.length + (items.length === 1 ? ' test' : ' tests') + ' to do', text: text, html: html };
+}
+
+// Tests worth a nudge: overdue, a failed last try, a refresher or menu change, or due within the week.
+function reminderItems_(tests, now) {
+  const soon = now.getTime() + REMIND_WITHIN_DAYS * 86400000;
+  const out = [];
+  tests.forEach(function (t) {
+    const due = new Date(t.due);
+    const changed = t.menuChanged ? 'The menu has changed, so this needs a re-sit. ' : '';
+    if (t.state === 'overdue') out.push({ lead: t.title, detail: changed + 'Was due ' + day_(due), label: 'Overdue', tone: 'bad' });
+    else if (t.state === 'refresh') out.push({ lead: t.title, detail: 'Refresher due by ' + day_(due) + '. Last passed ' + day_(new Date(t.passedOn)), label: 'Refresher', tone: 'warn' });
+    else if (t.state === 'retest') out.push({ lead: t.title, detail: changed + 'Last try ' + t.latestPct + '%. Re-test by ' + day_(due), label: 'Re-test', tone: 'warn' });
+    else if (t.state === 'todo' && t.menuChanged) out.push({ lead: t.title, detail: changed + 'Due ' + day_(due), label: 'Menu change', tone: 'warn' });
+    else if (t.state === 'todo' && due.getTime() <= soon) out.push({ lead: t.title, detail: 'Due ' + day_(due), label: 'Due soon', tone: 'plain' });
+  });
+  return out;
+}
+
+function shortTitle_(t) { return String(t).replace(/^[^:]*:\s*/, ''); }
+function shortTitles_(list) { return list.map(shortTitle_).join(', '); }
 function first_(s) { return s.name.split(' ')[0]; }
 function day_(d) { return Utilities.formatDate(d, TIMEZONE, 'd MMM'); }
 
