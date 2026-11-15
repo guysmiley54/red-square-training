@@ -25,7 +25,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 
 ## Train first, then test
 
-1. **Learn**: `glenorchy-menu-learn.html` covers everything the tests ask. Anyone can read it any time.
+1. **Learn**: `glenorchy-menu-learn.html` covers everything the tests ask. Anyone can read it any time. When a signed-in person finishes a section, it is recorded in the Guide tab with the time they spent.
 2. **Practice**: any section can be sat as a practice run. Nothing is saved.
 3. **Floor training**: a manager takes the person through the section at work, then marks it as trained in the crew view.
 4. **Test**: the 14 days to pass start from that sign-off. Until then nothing is due and a low score is not flagged.

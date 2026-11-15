@@ -10,6 +10,7 @@
  *   Tests     the tests each venue's crew must pass, the date each was assigned, and how often a refresher is due.
  *   Attempts  one row per test attempt (written by this script).
  *   Settings  the email on/off switch.
+ *   Guide     one row each time a signed-in person finishes a section of the menu guide, with the time spent.
  *   Training  one row each time a manager signs off that they trained someone on a section.
  *
  * Training comes first: a test is not due, and a low score is not flagged, until a manager has signed off
@@ -39,6 +40,7 @@ const TABS = {
   Tests: ['Key', 'Title', 'Venue', 'Required', 'Assigned', 'Refresher every (months)'],
   Settings: ['Setting', 'Value'],
   Training: ['When', 'Name', 'Test key', 'Trained by'],
+  Guide: ['When', 'Name', 'Test key', 'Seconds'],
   Attempts: ['When', 'Name', 'Staff venue', 'Test key', 'Test', 'Section', 'Correct', 'Out of', 'Score %', 'Result', 'Questions missed', 'Attempt ID', 'Seconds taken']
 };
 const SEED_TESTS = [
@@ -70,6 +72,7 @@ function route_(req) {
     case 'attempt': return attempt_(auth_(req), req);
     case 'crew': return crew_(auth_(req));
     case 'train': return train_(auth_(req), req);
+    case 'guide': return guide_(auth_(req), req);
     default: throw new Error('Unknown request.');
   }
 }
@@ -231,6 +234,16 @@ function crew_(viewer) {
   return { ok: true, passMark: PASS_MARK, crew: crewOf_(viewer, data).map(function (s) { return member_(s, data, now); }) };
 }
 
+// Records that a signed-in person went through a section of the menu guide, and how long they spent on it.
+function guide_(staff, req) {
+  const key = clean_(req.testId, 40) + ':' + clean_(req.sectionId, 40);
+  const secs = Math.max(0, Math.min(7200, Math.round(Number(req.secs) || 0)));
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try { appendRow_('Guide', [new Date(), staff.name, key, secs]); } finally { lock.releaseLock(); }
+  return { ok: true };
+}
+
 // A manager or owner records that they have trained someone on the floor. That starts the clock on the test.
 function train_(viewer, req) {
   if (viewer.role === 'Crew') throw new Error('Only managers can sign off training.');
@@ -289,6 +302,8 @@ function status_(staff, data, now) {
     const signed = data.training.filter(function (x) { return x.name === staff.key && x.key === t.key; })
       .sort(function (a, b) { return a.when - b.when; })[0] || null;
     const untrained = !owner && !signed && !lastPass;
+    const views = data.guide.filter(function (x) { return x.name === staff.key && x.key === t.key; }).sort(function (a, b) { return a.when - b.when; });
+    const lastView = views.length ? views[views.length - 1] : null;
     // A fail from before the training was signed off is not held against anyone.
     const counted = signed ? at.filter(function (x) { return x.when.getTime() >= signed.when.getTime(); }) : at;
     const latestCounted = counted.length ? counted[counted.length - 1] : null;
@@ -304,6 +319,9 @@ function status_(staff, data, now) {
       due: owner || untrained ? null : due.toISOString(),
       trainedOn: signed ? signed.when.toISOString() : null,
       trainedBy: signed ? signed.by : null,
+      guideOn: lastView ? lastView.when.toISOString() : null,
+      guideSecs: lastView ? lastView.secs : null,
+      guideViews: views.length,
       optional: owner,
       menuChanged: menuChanged,
       passedOn: lastPass ? lastPass.when.toISOString() : null,
@@ -558,7 +576,9 @@ function setup() { Object.keys(TABS).forEach(function (n) { sheet_(n); }); }
 /* ---------- sheet access ---------- */
 
 function load_() {
-  return { staff: staffList_(), training: readTab_('Training').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
+  return { staff: staffList_(), guide: readTab_('Guide').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
+    return { when: date_(r[0]) || new Date(0), name: norm_(r[1]), key: String(r[2]), secs: Number(r[3]) || 0 };
+  }), training: readTab_('Training').filter(function (r) { return r[0] && r[1]; }).map(function (r) {
     return { when: date_(r[0]) || new Date(0), name: norm_(r[1]), key: String(r[2]), by: String(r[3] || '') };
   }), tests: readTab_('Tests').filter(function (r) { return r[0]; }).map(function (r) {
     return { key: String(r[0]).trim(), title: String(r[1] || r[0]), venue: norm_(r[2]) || 'all', required: !/^n/i.test(String(r[3]).trim()), assigned: date_(r[4]),

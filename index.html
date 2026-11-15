@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115l">
+<link rel="stylesheet" href="common.css?v=20261115m">
 </head>
 <body>
 <div class="wrap">
@@ -97,8 +97,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261115l"></script>
-<script src="common.js?v=20261115l"></script>
+<script src="config.js?v=20261115m"></script>
+<script src="common.js?v=20261115m"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -165,6 +165,11 @@
     if(t.state === "overdue") return last + "Was due " + T.fmtDate(t.due);
     return last + "Due " + T.fmtDate(t.due);
   }
+  function guideLine(t){
+    if(!t.guideOn) return "Guide not read yet";
+    var n = t.guideSecs || 0;
+    return "Guide read " + T.fmtDate(t.guideOn) + " (" + Math.floor(n / 60) + ":" + (n % 60 < 10 ? "0" : "") + (n % 60) + ")";
+  }
   function memberPill(f){
     if(f.behind.length) return pill("fail", "Behind");
     if(f.poor.length) return pill("warn", "Needs help");
@@ -230,6 +235,7 @@
     res.tests.forEach(function(t){
       var item = el("div", "item"), left = el("div");
       left.appendChild(el("div", "t", t.title)); left.appendChild(el("div", "note", testLine(t)));
+      left.appendChild(el("div", "note", guideLine(t)));
       var right = el("div", "row"); right.appendChild(testPill(t));
       var link = T.testLink(t.key);
       if(link){
@@ -299,7 +305,7 @@
         var act = "";
         if(t.state === "untrained"){ act = el("button", "btn small ghost", "Mark trained"); act.type = "button"; act.addEventListener("click", function(){ signOff(m, [t.key], act); }); }
         var detail = t.state === "untrained" ? (t.tries ? "Last try " + t.latestPct + "%. " : "") + "Not signed off yet" : testLine(t) + (t.trainedOn ? ". Trained " + T.fmtDate(t.trainedOn) + (t.trainedBy ? " by " + t.trainedBy.split(" ")[0] : "") : "");
-        tt.appendChild(row([t.title, testPill(t), t.tries, t.best == null ? "" : t.best + "%", detail, act]));
+        tt.appendChild(row([t.title, testPill(t), t.tries, t.best == null ? "" : t.best + "%", detail + ". " + guideLine(t), act]));
       });
     }
     attemptsTable($("personAttempts"), m.attempts, true);

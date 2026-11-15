@@ -6,7 +6,7 @@
 <title>Glenorchy Menu Guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261115l">
+<link rel="stylesheet" href="common.css?v=20261115m">
 <style>
 /* Layout idea: pick a section, then step through it one slide at a time. Every item is the same card. */
 .tiles{display:grid;grid-template-columns:1fr;gap:10px}
@@ -48,6 +48,9 @@
     <p class="muted">September 2026 menu. Everything the tests ask about is in here. <span id="totalTime"></span></p>
   </header>
 
+  <p class="key" id="signNote" hidden><b>Sign in first</b>You can read the guide without signing in, but it only goes on your training record when you are signed in. <a href="index.html">Sign in</a></p>
+  <p class="note" id="whoNote" hidden></p>
+
   <!-- SECTION PICKER -->
   <section id="home" class="stack" hidden>
     <div class="who"><span>Pick a section. The slides move on by themselves, and you can pause or skip ahead any time.</span>
@@ -74,7 +77,9 @@
   </section>
 </div>
 
-<script src="glenorchy-menu.guide.js?v=20261115l"></script>
+<script src="config.js?v=20261115m"></script>
+<script src="common.js?v=20261115m"></script>
+<script src="glenorchy-menu.guide.js?v=20261115m"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -122,6 +127,19 @@
     return d;
   }
 
+  // Reaching the last slide counts as going through the section. Signed-in people get it on their record, once per visit.
+  var session = window.Training ? Training.getSession() : null, logged = {};
+  if(session){ $("whoNote").hidden = false; $("whoNote").textContent = "Signed in as " + session.profile.name + ". Each section you finish goes on your training record with the time you spent."; }
+  else $("signNote").hidden = false;
+  function logView(note){
+    if(!session){ note.textContent = "You are not signed in, so this is not on your training record."; return; }
+    if(logged[sec.id]){ note.textContent = "Saved to your training record."; return; }
+    logged[sec.id] = true; note.textContent = "Saving to your training record...";
+    Training.api("guide", {testId:"glenorchy-menu", sectionId:sec.id, secs:Math.round(spent / 1000)})
+      .then(function(){ note.textContent = "Saved to your training record."; })
+      .catch(function(err){ logged[sec.id] = false; note.textContent = "This could not be saved to your record. " + err.message; });
+  }
+
   function endSlide(){
     var d = el("div", "slide"), nextSec = GUIDE[GUIDE.indexOf(sec) + 1];
     d.appendChild(el("h2", null, "That is " + sec.name.toLowerCase() + " done"));
@@ -131,6 +149,8 @@
     var t = el("a", "btn ghost", "Sit the test"); t.href = "glenorchy-menu.html#" + sec.id; r.appendChild(t);
     if(nextSec){ var n = el("a", "btn ghost", "Next: " + nextSec.name); n.href = "#" + nextSec.id; r.appendChild(n); }
     d.appendChild(r);
+    var note = el("p", "note"); d.appendChild(note);
+    if(!showAll) logView(note);
     return d;
   }
 
