@@ -23,7 +23,7 @@
         <label for="who">Your name</label>
         <select id="who"><option value="">Loading names...</option></select>
       </div>
-      <div class="stack" style="gap:6px">
+      <div class="stack" id="pinWrap" style="gap:6px">
         <label for="pin">Your 4-digit PIN</label>
         <input type="password" id="pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Leave empty if this is your first time">
       </div>
@@ -115,6 +115,9 @@
   /* ---------- sign in ---------- */
   function signedIn(res){ T.setSession(res.token, res.profile); $("pin").value = ""; openHome(); }
 
+  $("who").addEventListener("change", function(){
+    var o = this.options[this.selectedIndex]; $("pinWrap").hidden = !!(o && o.getAttribute("data-open")); if($("pinWrap").hidden) $("pin").value = "";
+  });
   $("signinForm").addEventListener("submit", function(e){
     e.preventDefault(); setErr("signinErr");
     var sel = $("who"), id = sel.value, pin = $("pin").value.trim();
@@ -142,7 +145,7 @@
     var sel = $("who");
     T.api("roster").then(function(res){
       clear(sel); var first = el("option", null, "Choose your name"); first.value = ""; sel.appendChild(first);
-      res.staff.forEach(function(p){ var o = el("option", null, p.label); o.value = p.id; sel.appendChild(o); });
+      res.staff.forEach(function(p){ var o = el("option", null, p.label); o.value = p.id; if(p.open) o.setAttribute("data-open", "1"); sel.appendChild(o); });
     }).catch(function(err){ clear(sel).appendChild(el("option", null, "Names could not be loaded")); setErr("signinErr", err.message); });
   }
 

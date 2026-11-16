@@ -84,7 +84,7 @@ function route_(req) {
 function roster_() {
   const list = staffList_();
   const labels = shortLabels_(list.map(function (s) { return s.name; }));
-  return { ok: true, staff: list.map(function (s, i) { return { id: staffId_(s.key), label: labels[i] }; })
+  return { ok: true, staff: list.map(function (s, i) { return s.role === 'Demo' ? { id: staffId_(s.key), label: labels[i], open: true } : { id: staffId_(s.key), label: labels[i] }; })
     .sort(function (a, b) { return a.label.localeCompare(b.label); }) };
 }
 
@@ -134,7 +134,9 @@ function login_(req) {
   const staff = findStaff_(name);
   if (!staff) return miss();
 
-  if (!staff.pinHash) {
+  if (staff.role === 'Demo') {
+    // A demo account has no PIN. It holds nothing private and cannot see anyone else.
+  } else if (!staff.pinHash) {
     // First sign-in: the person chooses their own PIN.
     const newPin = String(req.newPin == null ? '' : req.newPin);
     if (!newPin) return { ok: false, needPin: true };
