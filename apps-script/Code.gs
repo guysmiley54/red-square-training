@@ -50,8 +50,15 @@ const SEED_TESTS = [
   ['glenorchy-menu:ingredients', 'Glenorchy menu: Tricky ingredients'],
   ['glenorchy-menu:addons', 'Glenorchy menu: Add-ons and pricing policy'],
   ['glenorchy-menu:dietary', 'Glenorchy menu: Dietary and allergens'],
-  ['glenorchy-menu:drinks', 'Glenorchy menu: Drinks']
+  ['glenorchy-menu:drinks', 'Glenorchy menu: Drinks'],
+  ['cambridge-menu:breakfast', 'Cambridge menu: Breakfast dishes'],
+  ['cambridge-menu:lunch', 'Cambridge menu: Lunch, burgers, snacks and kids'],
+  ['cambridge-menu:ingredients', 'Cambridge menu: Tricky ingredients'],
+  ['cambridge-menu:addons', 'Cambridge menu: Add-ons and pricing policy'],
+  ['cambridge-menu:dietary', 'Cambridge menu: Dietary and allergens'],
+  ['cambridge-menu:drinks', 'Cambridge menu: Drinks']
 ];
+function seedVenue_(key) { return key.indexOf('cambridge-') === 0 ? 'Cambridge' : 'Glenorchy'; }
 
 /* ---------- web app entry ---------- */
 
@@ -576,6 +583,12 @@ function installWeeklyEmail() {
 // Run once from the editor to create the tabs. Also happens on the first request.
 function setup() { Object.keys(TABS).forEach(function (n) { sheet_(n); }); }
 
+// Run once from the editor after a new venue's tests are added above. Adds any test rows the Tests tab is missing.
+function addMissingTests() {
+  const have = readTab_('Tests').map(function (r) { return String(r[0]).trim(); });
+  SEED_TESTS.forEach(function (t) { if (have.indexOf(t[0]) === -1) appendRow_('Tests', [t[0], t[1], seedVenue_(t[0]), 'Yes', new Date(), REFRESH_MONTHS]); });
+}
+
 /* ---------- sheet access ---------- */
 
 function load_() {
@@ -615,7 +628,7 @@ function sheet_(name) {
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, TABS[name].length).setFontWeight('bold');
     if (name === 'Settings') sh.appendRow(['Emails on', 'No']);
-    if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], 'Glenorchy', 'Yes', new Date(), REFRESH_MONTHS]); });
+    if (name === 'Tests') SEED_TESTS.forEach(function (t) { sh.appendRow([t[0], t[1], seedVenue_(t[0]), 'Yes', new Date(), REFRESH_MONTHS]); });
   }
   return sh;
 }

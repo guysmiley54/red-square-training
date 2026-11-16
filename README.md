@@ -9,6 +9,7 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 - `index.html` sign-in, My training, and the manager crew view
 - `glenorchy-menu.html` + `glenorchy-menu.questions.js` the Glenorchy menu test (September 2026 menu)
 - `glenorchy-menu-learn.html` + `glenorchy-menu.guide.js` the Glenorchy menu guide, a slideshow per section to step through before the test
+- `cambridge-menu.html`, `cambridge-menu.questions.js`, `cambridge-menu-learn.html`, `cambridge-menu.guide.js` the same four files for the Cambridge menu (September 2026 menu)
 - `common.js`, `common.css` shared sign-in session and styling
 - `config.js` the address of the Apps Script web app
 - `apps-script/Code.gs` the backend. It lives in the "Staff Training Log" Apps Script project (redsquarecafe80 Google account) and reads and writes the "Staff Training Log" spreadsheet
@@ -43,11 +44,11 @@ Everyone picks their name from a drop-down (first name and last initial) and ent
 
 ## When the menu changes
 
-1. Update the questions (`glenorchy-menu.questions.js`), the guide slides (`glenorchy-menu.guide.js`) and the menu label on both pages.
+1. Update that venue's questions (`glenorchy-menu.questions.js` or `cambridge-menu.questions.js`), its guide slides (`.guide.js`) and the menu label on both of its pages.
 2. In the Tests tab, set **Assigned** for those sections to the changeover date.
 
 Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days. Old attempts stay in each person's history, and the Monday emails list them as a menu change re-sit.
 
 ## Publishing a change
 
-Bump the `?v=` tag in the three HTML pages and put the same value in `version.txt`. Open pages compare themselves to `version.txt` and reload once if they are behind.
+Bump the `?v=` tag in every HTML page and put the same value in `version.txt`. Open pages compare themselves to `version.txt` and reload once if they are behind.

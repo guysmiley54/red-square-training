@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261116c">
+<link rel="stylesheet" href="common.css?v=20261116d">
 </head>
 <body>
 <div class="wrap">
@@ -97,8 +97,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261116c"></script>
-<script src="common.js?v=20261116c"></script>
+<script src="config.js?v=20261116d"></script>
+<script src="common.js?v=20261116d"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -258,11 +258,12 @@
       list.appendChild(item);
     });
     var extra = clear($("mineExtra"));
-    if(res.tests.some(function(t){ return t.key.indexOf("glenorchy-menu:") === 0; })){
-      var full = el("a", "sec full"); full.href = "glenorchy-menu.html#practice-full";
-      var l = el("span"); l.appendChild(el("b", null, "Glenorchy full menu test")); l.appendChild(el("small", null, "Practice run: a random mix from every section, not saved"));
+    [["glenorchy-menu", "Glenorchy"], ["cambridge-menu", "Cambridge"]].forEach(function(v){
+      if(!res.tests.some(function(t){ return t.key.indexOf(v[0] + ":") === 0; })) return;
+      var full = el("a", "sec full"); full.href = v[0] + ".html#practice-full";
+      var l = el("span"); l.appendChild(el("b", null, v[1] + " full menu test")); l.appendChild(el("small", null, "Practice run: a random mix from every section, not saved"));
       full.appendChild(l); full.appendChild(el("span", "n", "30 questions")); extra.appendChild(full);
-    }
+    });
     attemptsTable($("mineAttempts"), res.attempts, false);
   }
 

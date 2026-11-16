@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cambridge Menu Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css?v=20261116d">
+<style>
+/* Layout idea: pick a section, then step through it one slide at a time. Every item is the same card. */
+.tiles{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:700px){.tiles{grid-template-columns:1fr 1fr}}
+.deckbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.deckbar .count{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.slide{display:flex;flex-direction:column;gap:14px;min-height:300px}
+.slide h2{font-size:clamp(24px, 1.4vw + 20px, 36px)}
+.cards{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:760px){.cards.c2{grid-template-columns:1fr 1fr}.cards.c3{grid-template-columns:1fr 1fr 1fr}}
+.card{background:var(--card);border:2px solid var(--ink);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.card h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:20px;flex-wrap:wrap}
+.card h3 span{font-family:var(--body);font-weight:700;font-size:15px;color:var(--red);white-space:nowrap}
+.card p{font-size:1.05rem}
+.card .tip{color:var(--muted);font-size:.95rem}
+.cards.solo .card{padding:22px 24px}
+.cards.solo .card h3{font-size:clamp(24px, 1.4vw + 20px, 36px);font-weight:900}
+.cards.solo .card h3 span{font-size:18px}
+.cards.solo .card p{font-size:1.2rem}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;border:1.5px solid var(--muted);color:var(--muted);padding:1px 6px;margin-right:5px;text-transform:uppercase}
+.key{border-left:6px solid var(--red);background:var(--card);padding:12px 16px;font-size:1.05rem}
+.key b{display:block;color:var(--red);font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:.85rem;margin-bottom:2px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:3px solid var(--ink);padding-top:14px}
+.nav .btn{min-width:96px;text-align:center}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;flex:1}
+.dots i{width:9px;height:9px;background:var(--rule);display:block}
+.dots i.on{background:var(--red)}
+.all .slide{border-top:1px solid var(--rule);padding-top:16px;min-height:0}
+.all .nav,.all .count,.all #timerBar,.all #play{display:none}
+.timer{height:6px;background:var(--rule)}
+.timer i{display:block;height:100%;width:0;background:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="sq"></span>Red Square Cafe Cambridge</div>
+    <h1>Menu Guide</h1>
+    <p class="muted">September 2026 menu. Everything the tests ask about is in here. <span id="totalTime"></span></p>
+  </header>
+
+  <p class="key" id="signNote" hidden><b>Sign in first</b>You can read the guide without signing in, but it only goes on your training record when you are signed in. <a href="index.html">Sign in</a></p>
+  <p class="note" id="whoNote" hidden></p>
+
+  <!-- SECTION PICKER -->
+  <section id="home" class="stack" hidden>
+    <div class="who"><span>Pick a section. The slides move on by themselves, and you can pause or skip ahead any time.</span>
+      <span class="row"><a class="btn ghost small" href="index.html">My training</a><a class="btn ghost small crewLink" href="index.html#crew" hidden>My crew</a></span></div>
+    <div id="tiles" class="tiles"></div>
+  </section>
+
+  <!-- SLIDES -->
+  <section id="deck" class="stack" hidden>
+    <div class="deckbar">
+      <span><span class="marker" id="deckName"></span></span>
+      <span class="row"><span class="count" id="count"></span>
+        <button class="btn ghost small" id="toggleAll" type="button">Show all on one page</button>
+        <a class="btn ghost small" href="#">All sections</a>
+        <a class="btn ghost small" href="index.html">My training</a><a class="btn ghost small crewLink" href="index.html#crew" hidden>My crew</a></span>
+    </div>
+    <div id="slides" class="stack" style="gap:18px"></div>
+    <div class="timer" id="timerBar" aria-hidden="true"><i id="timerFill"></i></div>
+    <div class="nav">
+      <button class="btn ghost" id="back" type="button">Back</button>
+      <button class="btn ghost" id="play" type="button">Pause</button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="btn" id="next" type="button">Next</button>
+    </div>
+  </section>
+</div>
+
+<script src="config.js?v=20261116d"></script>
+<script src="common.js?v=20261116d"></script>
+<script src="cambridge-menu.guide.js?v=20261116d"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  var sec = null, at = 0, showAll = false;
+  // Slides move on by themselves. Each one stays up long enough to read at an easy pace:
+  // 4 seconds plus about half a second a word, never under 8 or over 40 seconds.
+  var playing = true, elapsed = 0, spent = 0, TICK = 100;
+  function words(s){
+    var t = [s.h]; (s.cards || []).forEach(function(c){ t.push(c.t, c.p || "", c.d || "", c.tip || ""); });
+    if(s.key) t.push(s.key[0], s.key[1]);
+    return t.join(" ").split(/\s+/).filter(Boolean).length;
+  }
+  function secsFor(s){ return Math.round(Math.min(40, Math.max(8, 4 + words(s) / 2.2))); }
+  function sectionSecs(x){ return x.slides.reduce(function(n, s){ return n + secsFor(s); }, 0); }
+  function mins(n){ var m = Math.max(1, Math.round(n / 60)); return "about " + m + " min"; }
+  function clock(n){ var m = Math.floor(n / 60), r = Math.round(n % 60); return m + " min " + (r < 10 ? "0" : "") + r + " sec"; }
+
+  function find(id){ for(var i=0;i<GUIDE.length;i++) if(GUIDE[i].id === id) return GUIDE[i]; return null; }
+
+  function card(c){
+    var d = el("div", "card"), h = el("h3", null, c.t);
+    if(c.p) h.appendChild(el("span", null, c.p));
+    d.appendChild(h);
+    if(c.d) d.appendChild(el("p", null, c.d));
+    if((c.tags && c.tags.length) || c.tip){
+      var t = el("p", "tip");
+      (c.tags || []).forEach(function(x){ t.appendChild(el("span", "tag", x)); });
+      if(c.tip) t.appendChild(document.createTextNode(c.tip));
+      d.appendChild(t);
+    }
+    return d;
+  }
+
+  function slide(s){
+    var d = el("div", "slide"), cards = s.cards || [];
+    // A single dish is its own heading, so only show a slide heading when it adds something.
+    if(!(cards.length === 1 && cards[0].t === s.h)) d.appendChild(el("h2", null, s.h));
+    if(cards.length){
+      var g = el("div", "cards " + (cards.length === 1 ? "solo" : (cards.length === 2 ? "c2" : "c3")));
+      cards.forEach(function(c){ g.appendChild(card(c)); });
+      d.appendChild(g);
+    }
+    if(s.key){ var k = el("div", "key"); k.appendChild(el("b", null, s.key[0])); k.appendChild(document.createTextNode(s.key[1])); d.appendChild(k); }
+    return d;
+  }
+
+  // Reaching the last slide counts as going through the section. Signed-in people get it on their record, once per visit.
+  var session = window.Training ? Training.getSession() : null, logged = {};
+  if(session){ $("whoNote").hidden = false; $("whoNote").textContent = "Signed in as " + session.profile.name + ". Each section you finish goes on your training record with the time you spent."; }
+  else $("signNote").hidden = false;
+  if(session && (session.profile.role === "Manager" || session.profile.role === "Owner")) Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; });
+  function logView(note){
+    if(!session){ note.textContent = "You are not signed in, so this is not on your training record."; return; }
+    if(logged[sec.id]){ note.textContent = "Saved to your training record."; return; }
+    logged[sec.id] = true; note.textContent = "Saving to your training record...";
+    Training.api("guide", {testId:"cambridge-menu", sectionId:sec.id, secs:Math.round(spent / 1000)})
+      .then(function(){ note.textContent = "Saved to your training record."; })
+      .catch(function(err){ logged[sec.id] = false; note.textContent = "This could not be saved to your record. " + err.message; });
+  }
+
+  function endSlide(){
+    var d = el("div", "slide"), nextSec = GUIDE[GUIDE.indexOf(sec) + 1];
+    d.appendChild(el("h2", null, "That is " + sec.name.toLowerCase() + " done"));
+    d.appendChild(el("p", null, "That took you " + clock(spent / 1000) + ". Have a practice run next. It is the same questions as the test, and nothing is saved."));
+    var r = el("div", "row");
+    var p = el("a", "btn", "Practise this section"); p.href = "cambridge-menu.html#practice-" + sec.id; r.appendChild(p);
+    var t = el("a", "btn ghost", "Sit the test"); t.href = "cambridge-menu.html#" + sec.id; r.appendChild(t);
+    if(nextSec){ var n = el("a", "btn ghost", "Next: " + nextSec.name); n.href = "#" + nextSec.id; r.appendChild(n); }
+    d.appendChild(r);
+    var note = el("p", "note"); d.appendChild(note);
+    if(!showAll) logView(note);
+    return d;
+  }
+
+  function total(){ return sec.slides.length + 1; }
+
+  function render(){
+    var box = $("slides"); box.innerHTML = "";
+    $("deck").classList.toggle("all", showAll);
+    $("toggleAll").textContent = showAll ? "Show as slides" : "Show all on one page";
+    if(showAll){ sec.slides.forEach(function(s){ box.appendChild(slide(s)); }); box.appendChild(endSlide()); return; }
+    box.appendChild(at < sec.slides.length ? slide(sec.slides[at]) : endSlide());
+    $("count").textContent = (at + 1) + " of " + total() + " · " + mins(sectionSecs(sec));
+    var last = at === total() - 1;
+    $("play").style.visibility = last ? "hidden" : "visible"; $("timerBar").style.visibility = last ? "hidden" : "visible";
+    $("play").textContent = playing ? "Pause" : "Play";
+    $("timerFill").style.width = "0";
+    $("back").disabled = at === 0;
+    $("next").style.visibility = at === total() - 1 ? "hidden" : "visible";
+    var dots = $("dots"); dots.innerHTML = "";
+    for(var i=0;i<total();i++) dots.appendChild(el("i", i <= at ? "on" : ""));
+  }
+
+  function go(n){ at = Math.max(0, Math.min(total() - 1, n)); elapsed = 0; render(); window.scrollTo(0, 0); }
+
+  setInterval(function(){
+    if(!sec || $("deck").hidden || showAll || document.hidden || at >= sec.slides.length) return;
+    spent += TICK;                       // time on the section counts whether or not the slides are paused
+    if(!playing) return;
+    elapsed += TICK;
+    var dur = secsFor(sec.slides[at]) * 1000;
+    $("timerFill").style.width = Math.min(100, elapsed / dur * 100) + "%";
+    if(elapsed >= dur) go(at + 1);
+  }, TICK);
+
+  function open(id){
+    sec = find(id);
+    if(!sec){ $("home").hidden = false; $("deck").hidden = true; window.scrollTo(0, 0); return; }
+    at = 0; showAll = false; playing = true; elapsed = 0; spent = 0;
+    $("deckName").textContent = sec.name;
+    $("home").hidden = true; $("deck").hidden = false;
+    render(); window.scrollTo(0, 0);
+  }
+
+  // section picker
+  GUIDE.forEach(function(s){
+    var a = el("a", "sec"); a.href = "#" + s.id;
+    var l = el("span"); l.appendChild(el("b", null, s.name));
+    l.appendChild(el("small", null, s.slides.slice(1, 4).map(function(x){ return x.h; }).join(", ") + " and more"));
+    a.appendChild(l); a.appendChild(el("span", "n", s.slides.length + " slides · " + mins(sectionSecs(s)))); $("tiles").appendChild(a);
+  });
+  $("totalTime").textContent = "All six sections take " + mins(GUIDE.reduce(function(n, s){ return n + sectionSecs(s); }, 0)) + ".";
+
+  $("next").addEventListener("click", function(){ go(at + 1); });
+  $("back").addEventListener("click", function(){ go(at - 1); });
+  $("toggleAll").addEventListener("click", function(){ showAll = !showAll; render(); });
+  $("play").addEventListener("click", function(){ playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
+  document.addEventListener("keydown", function(e){
+    if($("deck").hidden || showAll) return;
+    if(e.key === "ArrowRight") go(at + 1); else if(e.key === "ArrowLeft") go(at - 1);
+    else if(e.key === " " && e.target === document.body){ e.preventDefault(); $("play").click(); }
+  });
+  // swipe left and right on a phone
+  var sx = null, sy = null;
+  $("slides").addEventListener("touchstart", function(e){ sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+  $("slides").addEventListener("touchend", function(e){
+    if(sx === null || showAll) return;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(at + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  function route(){ open(location.hash.replace("#", "")); }
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+</body>
+</html>

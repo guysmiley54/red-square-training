@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cambridge Menu Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css?v=20261116d">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="sq"></span>Red Square Cafe Cambridge</div>
+    <h1>Menu Test</h1>
+    <p class="muted">September 2026 menu. Pass mark <span id="passLabel">80</span>%.</p>
+  </header>
+  <div class="who"><span>Signed in as <b id="whoName"></b></span>
+    <span class="row"><a class="btn ghost small" href="cambridge-menu-learn.html">Learn</a><a class="btn ghost small" href="index.html">My training</a><a class="btn ghost small crewLink" href="index.html#crew" hidden>My crew</a>
+    <button class="btn ghost small" id="signout" type="button">Sign out</button></span></div>
+
+  <!-- START -->
+  <section id="start" class="stack" hidden>
+    <p><span class="marker">Pick a section to sit the test</span></p>
+    <p class="note">These are the real tests and go on your profile. For a trial run, use Practice on My training. <a href="cambridge-menu-learn.html">Read the Learn page</a> first if you have not yet.</p>
+    <div id="secList" class="stack" style="gap:10px"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="stack" hidden>
+    <p id="modeNote" hidden><span class="marker">Practice run. Nothing is saved.</span></p>
+    <div class="meta"><span id="qSec"></span><span><span id="qNum"></span> · <span id="qClock">0:00</span></span></div>
+    <div class="bar"><i id="qBar" style="width:0"></i></div>
+    <h2 id="qText"></h2>
+    <div id="opts" class="stack" style="gap:10px"></div>
+    <div id="fb" class="fb" hidden></div>
+    <div class="row"><button class="btn" id="next" type="button" hidden>Next question</button>
+      <button class="btn ghost" id="quit" type="button">Quit test</button></div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="stack" hidden>
+    <p class="muted" id="rWho"></p>
+    <div class="row" style="gap:16px"><span class="score" id="rPct"></span><span class="pill" id="rPill"></span></div>
+    <p id="rLine"></p>
+    <p class="note" id="rSave"></p>
+    <div><button class="btn small" id="rRetrySave" type="button" hidden>Try saving again</button></div>
+    <div class="row"><button class="btn" id="retry" type="button">Re-test this section</button>
+      <a class="btn" id="realTest" href="#" hidden>Sit the real test</a>
+      <a class="btn ghost" href="index.html">Back to my training</a></div>
+    <div id="missBox" class="stack" hidden>
+      <h2>Questions to review</h2>
+      <div id="missList" class="stack"></div>
+    </div>
+  </section>
+</div>
+
+<script src="config.js?v=20261116d"></script>
+<script src="common.js?v=20261116d"></script>
+<script src="cambridge-menu.questions.js?v=20261116d"></script>
+<script>
+(function(){
+  var T = window.Training, el = T.el;
+  var PASS = 80, FULL_COUNT = 30, TEST_ID = "cambridge-menu", TEST_NAME = "Cambridge menu";
+  var $ = function(id){ return document.getElementById(id); };
+  var state = null, session = T.getSession();
+
+  // Results are saved to each person's own profile, so the test needs a sign-in.
+  if(!session){ location.replace("index.html"); return; }
+  T.watchIdle();
+  $("whoName").textContent = session.profile.name;
+  $("signout").addEventListener("click", T.signOut);
+  $("passLabel").textContent = PASS;
+
+  function shuffle(a){ a = a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function secName(id){ if(id==="full") return "Full menu test"; for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i].id===id) return SECTIONS[i].name; return id; }
+  function known(id){ return id==="full" || SECTIONS.some(function(s){ return s.id===id; }); }
+  function show(id){ ["start","quiz","result"].forEach(function(s){ $(s).hidden = s!==id; }); window.scrollTo(0,0); }
+
+  function renderStart(){
+    var list = $("secList"); list.innerHTML = "";
+    function add(id, name, blurb, n, full){
+      var b = el("button","sec"+(full?" full":"")); b.type="button";
+      var l = el("span"); l.appendChild(el("b",null,name)); l.appendChild(el("small",null,blurb));
+      b.appendChild(l); b.appendChild(el("span","n", n+" questions · about "+Math.max(1, Math.round(n*20/60))+" min"));
+      b.addEventListener("click", function(){ begin(id, id === "full"); });
+      list.appendChild(b);
+    }
+    SECTIONS.forEach(function(s){
+      add(s.id, s.name, s.blurb, QUESTIONS.filter(function(q){ return q.s===s.id; }).length, false);
+    });
+    add("full","Full menu test","Practice run: a random mix from every section, not saved", Math.min(FULL_COUNT, QUESTIONS.length), true);
+  }
+
+  function begin(sec, practice){
+    var pool = sec==="full" ? shuffle(QUESTIONS).slice(0, FULL_COUNT) : shuffle(QUESTIONS.filter(function(q){ return q.s===sec; }));
+    state = { sec:sec, qs:pool, i:0, right:0, missed:[], record:null, practice:!!practice, started:Date.now(), secs:0 };
+    clearInterval(ticker); ticker = setInterval(tick, 1000);
+    $("modeNote").hidden = !practice;
+    show("quiz"); renderQ();
+  }
+
+  // The clock shows how long the test is taking. There is no time limit.
+  var ticker = null;
+  function mmss(n){ var m = Math.floor(n / 60), r = n % 60; return m + ":" + (r < 10 ? "0" : "") + r; }
+  function took(n){ var m = Math.floor(n / 60), r = n % 60; return m ? m + " min" + (r ? " " + r + " sec" : "") : r + " sec"; }
+  function tick(){ if(!state || $("quiz").hidden) return; state.secs = Math.round((Date.now() - state.started) / 1000); $("qClock").textContent = mmss(state.secs); }
+  function renderQ(){
+    var q = state.qs[state.i];
+    $("qSec").textContent = secName(q.s);
+    $("qNum").textContent = (state.i+1)+" of "+state.qs.length;
+    $("qBar").style.width = (state.i/state.qs.length*100)+"%";
+    $("qText").textContent = q.q;
+    $("fb").hidden = true; $("next").hidden = true;
+    var box = $("opts"); box.innerHTML = "";
+    var correct = q.o[0];
+    shuffle(q.o).forEach(function(text, idx){
+      var b = el("button","opt"); b.type="button";
+      b.appendChild(el("span","k","ABCD"[idx])); b.appendChild(el("span",null,text));
+      b.addEventListener("click", function(){ answer(b, text, correct, q); });
+      box.appendChild(b);
+    });
+  }
+
+  function answer(btn, text, correct, q){
+    var ok = text===correct;
+    Array.prototype.forEach.call($("opts").children, function(b){
+      b.disabled = true;
+      if(b.lastChild.textContent===correct) b.classList.add("right");
+    });
+    if(ok) state.right++; else { btn.classList.add("wrong"); state.missed.push({q:q.q, y:text, c:correct, e:q.e}); }
+    var fb = $("fb"); fb.className = "fb "+(ok?"ok":"no"); fb.innerHTML = "";
+    fb.appendChild(el("b",null, ok?"Correct":"Not quite")); fb.appendChild(el("span",null,q.e)); fb.hidden = false;
+    var n = $("next"); n.textContent = state.i+1<state.qs.length ? "Next question" : "See my result"; n.hidden = false; n.focus();
+  }
+
+  function save(){
+    var sv = $("rSave"); $("rRetrySave").hidden = true;
+    sv.className = "note"; sv.textContent = "Saving your result to your profile...";
+    T.api("attempt", state.record).then(function(){ sv.textContent = "Result saved to your profile."; })
+      .catch(function(err){
+        if(!T.getSession()){ sv.className = "err"; sv.textContent = "Your sign-in ran out before this result was saved. Tell your manager your score, then sign in and sit it again."; return; }
+        sv.className = "err"; sv.textContent = "This result has not been saved. " + err.message; $("rRetrySave").hidden = false;
+      });
+  }
+
+  function finish(){
+    clearInterval(ticker); state.secs = Math.round((Date.now() - state.started) / 1000);
+    var total = state.qs.length, pct = Math.round(state.right/total*100), pass = pct>=PASS;
+    state.record = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,8), testId:TEST_ID, sectionId:state.sec, test:TEST_NAME,
+      section:secName(state.sec), right:state.right, total:total, secs:state.secs, missed:state.missed.map(function(m){ return m.q; }),
+      review:state.missed.map(function(m){ return {q:m.q, a:m.c}; })};
+    $("rWho").textContent = session.profile.name+" · "+secName(state.sec);
+    $("rPct").textContent = pct+"%";
+    $("rPill").textContent = pass?"Pass":"Re-test needed"; $("rPill").className = "pill "+(pass?"pass":"fail");
+    $("rLine").textContent = state.right+" of "+total+" correct in "+took(state.secs)+". "+(pass ? "You are over the "+PASS+"% pass mark." : "The pass mark is "+PASS+"%. Review the questions below and sit this section again.");
+    $("retry").textContent = pass ? "Sit this section again" : "Re-test this section";
+    var ml = $("missList"); ml.innerHTML = ""; $("missBox").hidden = !state.missed.length;
+    state.missed.forEach(function(m){
+      var d = el("div","miss");
+      d.appendChild(el("div","q",m.q)); d.appendChild(el("div","y","Your answer: "+m.y));
+      d.appendChild(el("div","c","Correct answer: "+m.c)); d.appendChild(el("div","muted",m.e));
+      ml.appendChild(d);
+    });
+    show("result");
+    if(state.practice){
+      $("rSave").className = "note"; $("rSave").textContent = "This was a practice run. Nothing was saved to your profile."; $("rRetrySave").hidden = true;
+      $("rLine").textContent = state.right+" of "+total+" correct in "+took(state.secs)+". "+(pass ? "That would be a pass. You look ready for the real test." : "The pass mark is "+PASS+"%. Read through the ones below, then have another go.");
+      $("retry").textContent = "Practise again"; $("realTest").hidden = false; $("realTest").href = "cambridge-menu.html#" + state.sec;
+    } else { $("realTest").hidden = true; save(); }
+  }
+
+  $("next").addEventListener("click", function(){ state.i++; if(state.i<state.qs.length) renderQ(); else finish(); });
+  $("quit").addEventListener("click", function(){ clearInterval(ticker); show("start"); });
+  $("retry").addEventListener("click", function(){ begin(state.sec, state.practice); });
+  $("realTest").addEventListener("click", function(e){ e.preventDefault(); begin(state.sec, false); });
+  $("rRetrySave").addEventListener("click", save);
+
+  renderStart();
+  function route(){
+    var want = location.hash.replace("#",""), practice = want.indexOf("practice-") === 0;
+    if(practice) want = want.slice(9);
+    if(known(want)) begin(want, practice); else show("start");
+  }
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+<script>(function(){ var s = window.Training && Training.getSession(); if(s && (s.profile.role === "Manager" || s.profile.role === "Owner")) Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; }); })();</script>
+</body>
+</html>

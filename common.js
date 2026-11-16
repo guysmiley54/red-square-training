@@ -46,7 +46,7 @@
   function fmtDateTime(iso){ return iso ? new Date(iso).toLocaleString("en-AU", {day:"numeric", month:"short", hour:"numeric", minute:"2-digit"}) : ""; }
 
   // Where each test lives. A test key looks like "glenorchy-menu:breakfast".
-  var PAGES = { "glenorchy-menu": "glenorchy-menu.html" };
+  var PAGES = { "glenorchy-menu": "glenorchy-menu.html", "cambridge-menu": "cambridge-menu.html" };
   function testLink(key){ var p = String(key).split(":"); return PAGES[p[0]] ? PAGES[p[0]] + "#" + p[1] : null; }
 
   // Old copies of a page can hang around in a browser tab. On load, and when a tab comes back into view,
