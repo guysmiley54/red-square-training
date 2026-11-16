@@ -207,7 +207,7 @@
     show("home"); T.watchIdle();
     $("whoName").textContent = s.profile.name;
     $("whoMeta").textContent = [s.profile.venue, s.profile.role === "Crew" ? "" : s.profile.role].filter(Boolean).join(" · ");
-    var manager = s.profile.role !== "Crew";
+    var manager = s.profile.role === "Manager" || s.profile.role === "Owner";
     $("tabs").hidden = !manager;
     ["mine","crew","person"].forEach(function(x){ $(x).hidden = true; });
     $("loading").hidden = false; setErr("homeErr");

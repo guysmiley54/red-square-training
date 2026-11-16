@@ -132,7 +132,7 @@
   var session = window.Training ? Training.getSession() : null, logged = {};
   if(session){ $("whoNote").hidden = false; $("whoNote").textContent = "Signed in as " + session.profile.name + ". Each section you finish goes on your training record with the time you spent."; }
   else $("signNote").hidden = false;
-  if(session && session.profile.role !== "Crew") Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; });
+  if(session && (session.profile.role === "Manager" || session.profile.role === "Owner")) Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; });
   function logView(note){
     if(!session){ note.textContent = "You are not signed in, so this is not on your training record."; return; }
     if(logged[sec.id]){ note.textContent = "Saved to your training record."; return; }

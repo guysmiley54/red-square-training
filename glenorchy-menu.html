@@ -186,6 +186,6 @@
   route();
 })();
 </script>
-<script>(function(){ var s = window.Training && Training.getSession(); if(s && s.profile.role !== "Crew") Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; }); })();</script>
+<script>(function(){ var s = window.Training && Training.getSession(); if(s && (s.profile.role === "Manager" || s.profile.role === "Owner")) Array.prototype.forEach.call(document.querySelectorAll(".crewLink"), function(a){ a.hidden = false; }); })();</script>
 </body>
 </html>

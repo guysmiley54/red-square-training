@@ -23,6 +23,7 @@
  * Passes from before that date stop counting, so everyone re-sits on the new menu within 14 days.
  *
  * Nobody sees anything without signing in. Crew see their own results only.
+ * A Demo role is for showing the tool to someone: it can sit any test like an owner, sees no crew, and never appears in crew lists or emails.
  * Managers see the crew at their venue(s) and sit the tests themselves. Owners see everyone, and can sit any test to try it, but nothing is required of them.
  */
 const SHEET_ID = '15ax94vTHrcXj73P3CmR-hwgc7nUEBOr5kCVwXKuMbkQ'; // "Staff Training Log" spreadsheet
@@ -228,7 +229,7 @@ function attempt_(staff, req) {
 }
 
 function crew_(viewer) {
-  if (viewer.role === 'Crew') throw new Error('The crew view is for managers.');
+  if (viewer.role === 'Crew' || viewer.role === 'Demo') throw new Error('The crew view is for managers.');
   const data = load_();
   const now = new Date();
   return { ok: true, passMark: PASS_MARK, crew: crewOf_(viewer, data).map(function (s) { return member_(s, data, now); }) };
@@ -246,7 +247,7 @@ function guide_(staff, req) {
 
 // A manager or owner records that they have trained someone on the floor. That starts the clock on the test.
 function train_(viewer, req) {
-  if (viewer.role === 'Crew') throw new Error('Only managers can sign off training.');
+  if (viewer.role === 'Crew' || viewer.role === 'Demo') throw new Error('Only managers can sign off training.');
   const data = load_();
   const person = crewOf_(viewer, data).filter(function (s) { return staffId_(s.key) === String(req.staff); })[0];
   if (!person) throw new Error('That person is not in your crew.');
@@ -266,7 +267,7 @@ function train_(viewer, req) {
 
 function crewOf_(viewer, data) {
   return data.staff.filter(function (s) {
-    if (s.role === 'Owner') return false; // owners are not tested, so they never appear in a crew list
+    if (s.role === 'Owner' || s.role === 'Demo') return false; // owners and demo accounts are not tested, so they never appear in a crew list
     if (viewer.role === 'Owner') return true;
     return s.venues.some(function (v) { return viewer.venues.indexOf(v) !== -1 || v === 'all' || viewer.venues.indexOf('all') !== -1; });
   });
@@ -279,7 +280,7 @@ function member_(s, data, now) {
 
 // One entry per required test that applies to this person.
 function status_(staff, data, now) {
-  const owner = staff.role === 'Owner'; // owners can sit any test to try it or demo it; nothing is due for them
+  const owner = staff.role === 'Owner' || staff.role === 'Demo'; // owners and demo accounts can sit any test to try it; nothing is due for them
   const mine = data.attempts.filter(function (a) { return norm_(a.name) === staff.key; });
   return data.tests.filter(function (t) {
     return t.required && (owner || t.venue === 'all' || staff.venues.indexOf('all') !== -1 || staff.venues.indexOf(t.venue) !== -1);
@@ -483,7 +484,7 @@ function summaryFor_(viewer, data, now) {
 }
 
 function weeklySummary_(data, now) {
-  data.staff.filter(function (m) { return m.role !== 'Crew' && m.email; }).forEach(function (m) {
+  data.staff.filter(function (m) { return (m.role === 'Manager' || m.role === 'Owner') && m.email; }).forEach(function (m) {
     const sum = summaryFor_(m, data, now);
     if (!sum.progress.length) return;
     if (!sum.follow.length && !sum.retest.length && !sum.results.length && !sum.training.length) return; // a quiet week sends nothing
@@ -522,7 +523,7 @@ function summaryEmail_(m, sum) {
 }
 
 function staffReminders_(data, now) {
-  data.staff.filter(function (s) { return s.email && s.role !== 'Owner'; }).forEach(function (s) {
+  data.staff.filter(function (s) { return s.email && s.role !== 'Owner' && s.role !== 'Demo'; }).forEach(function (s) {
     const items = reminderItems_(status_(s, data, now), now);
     if (!items.length) return;
     const mail = reminderEmail_(s, items);
@@ -591,7 +592,7 @@ function load_() {
 
 function staffList_() {
   return readTab_('Staff').map(function (r, i) {
-    const role = /^own/i.test(String(r[2]).trim()) ? 'Owner' : (/^man/i.test(String(r[2]).trim()) ? 'Manager' : 'Crew');
+    const role = /^own/i.test(String(r[2]).trim()) ? 'Owner' : (/^man/i.test(String(r[2]).trim()) ? 'Manager' : (/^demo/i.test(String(r[2]).trim()) ? 'Demo' : 'Crew'));
     return { row: i + 2, name: String(r[0]).trim(), key: norm_(r[0]), venueText: String(r[1]).trim(),
       venues: String(r[1]).split(',').map(norm_).filter(String), role: role, email: String(r[3] || '').trim(),
       start: date_(r[4]), active: !/^n/i.test(String(r[5]).trim()), pinHash: String(r[6] || '').trim() };
