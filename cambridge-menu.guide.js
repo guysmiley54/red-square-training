@@ -179,7 +179,7 @@ var GUIDE = [
   { h:"Cool Change: Cold Foam", cards:[
      {t:"Cappuccino", p:"$8.50", d:"Double shot espresso, ice, milk of your choice, cold foam, choc sprinkle."},
      {t:"Bounty", p:"$8.50", d:"Choc drizzle, coconut milk, ice, vanilla cold foam, shaved coconut."}],
-    key:["Cold foam","Milk frothed cold into a thick foam that sits on top of the drink."] },
+    key:["Cold foam","A mix of cream and milk, lightly sweetened and frothed cold. It sits on top of the drink. It is dairy, even on the Bounty with coconut milk."] },
   { h:"Cool Change: Refresher", cards:[
      {t:"Raspberry", p:"$7", d:"Raspberry coulis, ice, lemonade, freeze-dried raspberries, mint.", tip:"Coulis is a smooth fruit sauce."},
      {t:"Peach", p:"$7", d:"Peach puree, ice, lemonade, dried peach."}] },
