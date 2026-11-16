@@ -23,7 +23,7 @@ var GUIDE = [
  { id:"lunch", name:"Lunch, burgers, snacks and kids", slides:[
   { h:"Chicken Taco Salad", cards:[{t:"Chicken Taco Salad", p:"$25", d:"Chicken breast, cos lettuce, cherry tomato, red onion, guacamole, corn chips, chipotle dressing.", tags:["GF","DF"]}] },
   { h:"Black Sesame Squid", cards:[{t:"Black Sesame Squid", p:"$26.50", d:"Squid rings in egg, breadcrumbs and black sesame seeds, lightly fried. Wombok, orange & pecan salad with saffron & shallot dressing.", tip:"The squid is imported."}],
-    key:["Watch out","The salad has pecans. The menu does not mark this dish NUTS."] },
+    key:["Allergy","The salad has pecans, so this dish is a nut allergy risk."] },
   { h:"Prawn Mee Goreng", cards:[{t:"Prawn Mee Goreng", p:"$27.50", d:"Panfried prawns, onion, garlic, hokkien noodles, house sauce.", tags:["Spicy"], tip:"The prawns are imported."}],
     key:["Say it at the table","It is the one lunch dish marked spicy."] },
   { h:"Chicken Parmy", cards:[
@@ -149,8 +149,8 @@ var GUIDE = [
      {t:"VGO", d:"A vegan option is available on request. On the Everything Smash."}],
     key:["Remember","Options and substitutes are at extra cost, allergy or not."] },
   { h:"Nuts and sesame", cards:[
-     {t:"Marked NUTS", d:"House Made Granola."},
-     {t:"Not marked, but has nuts", d:"Black Sesame Squid. The salad has pecans."},
+     {t:"House Made Granola", d:"Made with nuts."},
+     {t:"Black Sesame Squid", d:"The salad has pecans, which are tree nuts."},
      {t:"Sesame", d:"Everything Smash (the seasoning) and Black Sesame Squid (the crumb)."}] },
   { h:"Gluten", cards:[
      {t:"Gluten free as served", d:"Chicken Taco Salad (GF) and Nachos (G)."},
