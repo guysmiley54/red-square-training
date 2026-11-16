@@ -34,7 +34,8 @@ var GUIDE = [
   { h:"Loaded \"Spuds\"", cards:[
      {t:"House Classic", p:"$19.50", d:"Fried potato, gravy, cheese.", tags:["V"]},
      {t:"Cheesy Bacon", p:"Add $1", d:"Fried potato, bacon, cheese, sour cream, spring onion."},
-     {t:"Pulled Pork", p:"Add $4", d:"Fried potato, pulled pork, cheese, pickled red onion, sour cream, guacamole, jalapenos."}] },
+     {t:"Pulled Pork", p:"Add $4", d:"Fried potato, pulled pork, cheese, pickled red onion, sour cream, guacamole, jalapenos."}],
+    key:["Not a baked potato","Customers sometimes expect a whole potato roasted in foil. Ours are twice-cooked, fried and loaded. Say so when they order."] },
   { h:"Fish & Chips", cards:[{t:"Fish & Chips", p:"2 piece $25, 3 piece $27.50", d:"Beer battered flathead fillets, chips, salad, lemon wedge, tartare.", tip:"The flathead is imported. The third piece is only $2.50 more."}] },
   { h:"Red Square Burger and Steak Sandwich", cards:[
      {t:"Red Square Burger", p:"$25", d:"Beef pattie, bacon, American cheese, ketchup, mustard, lettuce, bun. With chips.", tags:["GFO"], tip:"Double beef, double cheese $5."},
