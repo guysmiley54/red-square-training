@@ -6,7 +6,7 @@
 <title>Red Square Staff Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common.css?v=20261116g">
+<link rel="stylesheet" href="common.css?v=20261116h">
 </head>
 <body>
 <div class="wrap">
@@ -19,6 +19,10 @@
   <section id="signin" class="stack" hidden>
     <p><span class="marker">Sign in to your training</span></p>
     <form id="signinForm" class="stack" autocomplete="off">
+      <div class="stack" id="venueWrap" style="gap:6px" hidden>
+        <label for="venue">Your venue</label>
+        <select id="venue"></select>
+      </div>
       <div class="stack" style="gap:6px">
         <label for="who">Your name</label>
         <select id="who"><option value="">Loading names...</option></select>
@@ -97,8 +101,8 @@
   </section>
 </div>
 
-<script src="config.js?v=20261116g"></script>
-<script src="common.js?v=20261116g"></script>
+<script src="config.js?v=20261116h"></script>
+<script src="common.js?v=20261116h"></script>
 <script>
 (function(){
   var T = window.Training, el = T.el;
@@ -141,11 +145,38 @@
   $("setpinBack").addEventListener("click", function(){ show("signin"); });
   $("signout").addEventListener("click", T.signOut);
 
+  // With more than one venue on the list, pick the venue first so the name list stays short.
+  // A link ending in ?venue=cambridge opens on that venue, and each computer remembers the last one used.
+  var roster = [], VENUE_KEY = "rsq-venue";
+  function cap(v){ return v.replace(/\b[a-z]/g, function(c){ return c.toUpperCase(); }); }
+  function fillNames(){
+    var sel = $("who"), v = $("venue").value, pick = !$("venueWrap").hidden;
+    clear(sel); var first = el("option", null, pick && !v ? "Choose your venue first" : "Choose your name"); first.value = ""; sel.appendChild(first);
+    $("pinWrap").hidden = false;
+    if(pick && !v) return;
+    roster.forEach(function(p){
+      var vs = p.venues || [];
+      if(pick && vs.indexOf(v) === -1 && vs.indexOf("all") === -1) return;
+      var o = el("option", null, p.label); o.value = p.id; if(p.open) o.setAttribute("data-open", "1"); sel.appendChild(o);
+    });
+  }
+  $("venue").addEventListener("change", function(){ try{ localStorage.setItem(VENUE_KEY, this.value); }catch(e){} fillNames(); });
   function loadRoster(){
     var sel = $("who");
     T.api("roster").then(function(res){
-      clear(sel); var first = el("option", null, "Choose your name"); first.value = ""; sel.appendChild(first);
-      res.staff.forEach(function(p){ var o = el("option", null, p.label); o.value = p.id; if(p.open) o.setAttribute("data-open", "1"); sel.appendChild(o); });
+      roster = res.staff;
+      var venues = [];
+      roster.forEach(function(p){ (p.venues || []).forEach(function(v){ if(v !== "all" && venues.indexOf(v) === -1) venues.push(v); }); });
+      venues.sort();
+      var vsel = clear($("venue")); $("venueWrap").hidden = venues.length < 2;
+      if(venues.length >= 2){
+        var f = el("option", null, "Choose your venue"); f.value = ""; vsel.appendChild(f);
+        venues.forEach(function(v){ var o = el("option", null, cap(v)); o.value = v; vsel.appendChild(o); });
+        var want = (new URLSearchParams(location.search).get("venue") || "").toLowerCase(), saved = "";
+        try{ saved = localStorage.getItem(VENUE_KEY) || ""; }catch(e){}
+        vsel.value = venues.indexOf(want) !== -1 ? want : (venues.indexOf(saved) !== -1 ? saved : "");
+      }
+      fillNames();
     }).catch(function(err){ clear(sel).appendChild(el("option", null, "Names could not be loaded")); setErr("signinErr", err.message); });
   }
 

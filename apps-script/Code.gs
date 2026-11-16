@@ -88,10 +88,11 @@ function route_(req) {
 /* ---------- sign-in ---------- */
 
 // The sign-in drop-down. Shows first name and last initial only, because the site is public.
+// Each name carries its venue(s) so the sign-in page can show one venue's names at a time.
 function roster_() {
   const list = staffList_();
   const labels = shortLabels_(list.map(function (s) { return s.name; }));
-  return { ok: true, staff: list.map(function (s, i) { return s.role === 'Demo' ? { id: staffId_(s.key), label: labels[i], open: true } : { id: staffId_(s.key), label: labels[i] }; })
+  return { ok: true, staff: list.map(function (s, i) { return s.role === 'Demo' ? { id: staffId_(s.key), label: labels[i], venues: s.venues, open: true } : { id: staffId_(s.key), label: labels[i], venues: s.venues }; })
     .sort(function (a, b) { return a.label.localeCompare(b.label); }) };
 }
 
